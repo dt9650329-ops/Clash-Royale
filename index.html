@@ -260,6 +260,6 @@ auth.onAuthStateChanged((user) => {
   const b = refCred.on("value", (s) => { $("p-creditos").textContent = s.val() || 0; });
   detener.push(() => refPerfil.off("value", a), () => refCred.off("value", b));
 });
-</script>
+</script>  
 </body>
 </html>
