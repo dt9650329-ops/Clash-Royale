@@ -11,7 +11,16 @@
 :root{--fondo:#151A3D;--panel:#1F2760;--linea:#34409A;--texto:#F4F1FF;--suave:#A9B0E6;--oro:#F7B733;--azul:#3D7BFF;--error:#FF9A9A;--ok:#6EE7A8;color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--fondo);color:var(--texto);font:16px/1.5 "Nunito",system-ui,sans-serif;padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom)}
-main{max-width:480px;margin:0 auto;padding:28px 0 56px}
+main{max-width:1100px;margin:0 auto;padding:28px 0 56px}
+.angosto{max-width:520px;margin:0 auto}
+.rejilla{display:grid;gap:16px}
+.rejilla .panel{margin:0}
+@media (min-width:760px){
+  body{font-size:18px}
+  h1{font-size:2.4rem}
+  .rejilla{grid-template-columns:1fr 1fr}
+  .rejilla .clash{grid-row:span 2}
+}
 h1,h2,.copas{font-family:"Lilita One","Nunito",system-ui,sans-serif;font-weight:400;letter-spacing:.01em}
 h1{font-size:2rem;line-height:1.15;margin:0 0 6px}
 h2{font-size:1.25rem;margin:0 0 12px}
@@ -43,12 +52,12 @@ dd{margin:0;text-align:right;overflow-wrap:anywhere}
 <body>
 <main>
 
-  <section id="vista-carga">
+  <section id="vista-carga" class="angosto">
     <h1>Torneos de Clash Royale</h1>
     <p class="suave">Cargando…</p>
   </section>
 
-  <section id="vista-auth" class="oculto">
+  <section id="vista-auth" class="angosto oculto">
     <h1>Torneos de Clash Royale</h1>
     <p class="suave">Entra con tu cuenta de Google para crear tu perfil, vincular tu tag de Supercell y competir.</p>
     <p id="msg-auth" class="msg" role="status"></p>
@@ -63,7 +72,7 @@ dd{margin:0;text-align:right;overflow-wrap:anywhere}
     </button>
   </section>
 
-  <section id="vista-registro" class="oculto">
+  <section id="vista-registro" class="angosto oculto">
     <h1>Completa tu registro</h1>
     <p class="suave">Es tu primera vez aquí. Confirma tus datos para crear tu perfil.</p>
     <form id="form-registro" novalidate>
@@ -82,6 +91,7 @@ dd{margin:0;text-align:right;overflow-wrap:anywhere}
       <button type="button" id="btn-salir" class="secundario">Salir</button>
     </header>
 
+    <div class="rejilla">
     <div class="panel">
       <h2>Mis datos</h2>
       <dl>
@@ -90,7 +100,7 @@ dd{margin:0;text-align:right;overflow-wrap:anywhere}
       </dl>
     </div>
 
-    <div class="panel">
+    <div class="panel clash">
       <h2>Clash Royale</h2>
       <div id="clash-vinculado" class="oculto">
         <p class="copas" id="c-copas">–</p>
@@ -115,6 +125,7 @@ dd{margin:0;text-align:right;overflow-wrap:anywhere}
     <div class="panel">
       <h2>Créditos</h2>
       <p class="copas" id="p-creditos">0</p>
+    </div>
     </div>
   </section>
 
