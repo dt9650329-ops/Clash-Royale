@@ -59,6 +59,9 @@ td.accion{text-align:right;white-space:nowrap}
 a.primario{display:block;text-align:center;text-decoration:none}
 dialog{background:var(--panel);color:var(--texto);border:2px solid var(--linea);border-radius:14px;padding:20px;width:min(92vw,360px);text-align:center}
 dialog::backdrop{background:rgba(0,0,0,.65)}
+.vinculo{display:block;margin:2px 0 0 auto;background:none;border:0;color:var(--suave);text-decoration:underline;font-size:.8em;cursor:pointer;padding:0}
+.ya{color:var(--ok);font-weight:700}
+dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
 .historial{list-style:none;margin:0;padding:0}
 .historial li{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linea)}
 .historial .fecha{color:var(--suave);font-size:.85em;white-space:nowrap}
@@ -183,6 +186,10 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
   <p class="suave">Escanea este QR desde Clash Royale (Social → Añadir amigos → Escanear) o abre el enlace.</p>
   <div id="qr" class="qr"></div>
   <a id="dlg-enlace" class="primario" href="#" target="_blank" rel="noopener">Abrir en Clash Royale</a>
+  <input id="dlg-url" readonly aria-label="Enlace de amigo" style="margin-top:12px">
+  <button type="button" class="secundario" id="dlg-copiar" style="width:100%">Copiar enlace</button>
+  <button type="button" class="secundario" id="dlg-hecho" style="width:100%;margin-top:10px">Ya nos añadimos ✓</button>
+  <p class="suave" style="margin:12px 0 0;font-size:.85em">Si ya son amigos en el juego, no hace falta añadirse otra vez.</p>
   <button type="button" class="secundario cancelar" id="dlg-cerrar">Cerrar</button>
 </dialog>
 
@@ -216,6 +223,10 @@ let perfilPrevio = {};
 let perfilActual = {};
 let ultimoSync = "";
 let qrPintado = "";
+let jugadoresActual = [];
+let yaJugaron = new Set();
+let amigosSet = new Set();
+let dialogoActual = null;
 
 function mostrar(vista) {
   ["carga", "auth", "registro", "perfil"].forEach((v) => {
@@ -380,15 +391,47 @@ $("form-enlace").addEventListener("submit", async (ev) => {
   }
 });
 
+// Marca en NUESTRO sistema que los dos ya son amigos (se guarda en las dos direcciones).
+async function marcarAmigos(j) {
+  const yo = auth.currentUser;
+  if (!yo || !j || !j.uid || j.uid === yo.uid) return;
+  const t = firebase.database.ServerValue.TIMESTAMP;
+  const cambios = {};
+  cambios["amigos/" + yo.uid + "/" + j.uid] = t;
+  cambios["amigos/" + j.uid + "/" + yo.uid] = t;
+  try {
+    await db.ref().update(cambios);
+  } catch (e) {
+    mensaje("msg-publico", "No pudimos marcar la amistad" + detalleError(e));
+  }
+}
+
 function abrirAmigo(j) {
+  dialogoActual = j;
   $("dlg-nombre").textContent = j.nombreClash || j.nombre || "Jugador";
   $("dlg-enlace").href = j.enlace;
+  $("dlg-url").value = j.enlace;
+  $("dlg-copiar").textContent = "Copiar enlace";
   const qr = $("qr");
   qr.innerHTML = "";
   new QRCode(qr, { text: j.enlace, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
   $("dlg-amigo").showModal();
 }
 $("dlg-cerrar").onclick = () => $("dlg-amigo").close();
+// Al abrir el enlace en Clash Royale, el juego los agrega como amigos: lo dejamos anotado.
+$("dlg-enlace").addEventListener("click", () => marcarAmigos(dialogoActual));
+// Para quien escaneó el QR o copió el enlace en vez de abrirlo desde aquí.
+$("dlg-hecho").onclick = async () => { await marcarAmigos(dialogoActual); $("dlg-amigo").close(); };
+$("dlg-copiar").onclick = async () => {
+  const url = $("dlg-url").value;
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch (e) {
+    $("dlg-url").select();
+    try { document.execCommand("copy"); } catch (x) { /* si no se puede, queda seleccionado para copiar a mano */ }
+  }
+  $("dlg-copiar").textContent = "¡Copiado!";
+};
 
 // --- Tabla de posiciones ---
 // Orden: más victorias primero; con empate, el que se registró antes. Con todos en 0 queda el orden de registro.
@@ -420,6 +463,20 @@ function pintarTabla(lista, miUid) {
     const tdAccion = celda("", "accion");
     if (j.uid === miUid) {
       tdAccion.textContent = "Tú";
+    } else if (amigosSet.has(j.uid) || yaJugaron.has(j.uid)) {
+      // Amigos: quedó anotado en el sistema. Si no, pero ya hay una amistosa entre los dos, "Ya jugaron".
+      const ok = document.createElement("span");
+      ok.className = "ya";
+      ok.textContent = amigosSet.has(j.uid) ? "Ya son amigos ✓" : "Ya jugaron ✓";
+      tdAccion.appendChild(ok);
+      if (j.enlace && tagDeEnlace(j.enlace)) {
+        const v = document.createElement("button");
+        v.type = "button";
+        v.className = "vinculo";
+        v.textContent = "ver enlace";
+        v.onclick = () => abrirAmigo(j);
+        tdAccion.appendChild(v);
+      }
     } else if (j.enlace && tagDeEnlace(j.enlace)) {
       const b = document.createElement("button");
       b.type = "button";
@@ -529,6 +586,9 @@ function entrarPerfil(user) {
   tagCargado = null;
   ultimoSync = "";
   qrPintado = "";
+  amigosSet = new Set();
+  yaJugaron = new Set();
+  jugadoresActual = [];
   mostrar("perfil");
   const refPerfil = db.ref("users/" + user.uid);
   const refCred = db.ref("wallets/" + user.uid + "/creditos");
@@ -539,15 +599,27 @@ function entrarPerfil(user) {
     const lista = [];
     s.forEach((h) => { lista.push(Object.assign({ uid: h.key }, h.val())); });
     mensaje("msg-tabla", "");
-    pintarTabla(lista, user.uid);
+    jugadoresActual = lista;
+    pintarTabla(lista.slice(), user.uid);
   }, (e) => mensaje("msg-tabla", "No pudimos cargar la tabla. Revisa las reglas de la base de datos" + detalleError(e)));
+  const refAmigos = db.ref("amigos/" + user.uid);
+  const e = refAmigos.on("value", (s) => {
+    amigosSet = new Set(Object.keys(s.val() || {}));
+    if (jugadoresActual.length) pintarTabla(jugadoresActual.slice(), user.uid);
+  }, (err) => console.error(err));
   const refHist = db.ref("historial").orderByChild("fecha").limitToLast(30);
   const d = refHist.on("value", (s) => {
     const lista = [];
     s.forEach((h) => { lista.push(h.val()); });
+    yaJugaron = new Set();
+    lista.forEach((h) => {
+      if (h.ganadorUid === user.uid) yaJugaron.add(h.perdedorUid);
+      else if (h.perdedorUid === user.uid) yaJugaron.add(h.ganadorUid);
+    });
     pintarHistorial(lista, user.uid);
+    if (jugadoresActual.length) pintarTabla(jugadoresActual.slice(), user.uid);
   }, (e) => mensaje("msg-historial", "No pudimos cargar el historial. Revisa las reglas de la base de datos" + detalleError(e)));
-  detener.push(() => refPerfil.off("value", a), () => refCred.off("value", b), () => refJug.off("value", c), () => refHist.off("value", d));
+  detener.push(() => refPerfil.off("value", a), () => refCred.off("value", b), () => refJug.off("value", c), () => refHist.off("value", d), () => refAmigos.off("value", e));
 }
 
 // --- Qué pantalla mostrar al abrir la página ---

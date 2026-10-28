@@ -11,6 +11,7 @@
         "correo": { ".validate": "newData.isString() && newData.val() === auth.token.email" },
         "telefono": { ".validate": "newData.isString() && newData.val().matches(/^\\+?[0-9]{7,15}$/)" },
         "tag": { ".validate": "newData.isString() && newData.val().matches(/^#[0-9A-Z]{3,15}$/)" },
+        "enlace": { ".validate": "newData.isString() && newData.val().length <= 300 && newData.val().matches(/^https:\\/\\/link\\.clashroyale\\.com\\/.*[Ff]riend.*$/)" },
         "creadoEn": { ".validate": "newData.isNumber()" },
         "$otro": { ".validate": false }
       }
@@ -20,6 +21,49 @@
         ".read": "auth != null && auth.uid === $uid",
         ".write": false
       }
+    },
+    "jugadores": {
+      ".read": "auth != null",
+      ".indexOn": ["creadoEn"],
+      "$uid": {
+        "nombre": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 60"
+        },
+        "tag": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.isString() && newData.val().matches(/^#[0-9A-Z]{3,15}$/)"
+        },
+        "enlace": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.isString() && newData.val().length <= 300 && newData.val().matches(/^https:\\/\\/link\\.clashroyale\\.com\\/.*[Ff]riend.*$/)"
+        },
+        "creadoEn": {
+          ".write": "auth != null && auth.uid === $uid && (!data.exists() || data.val() === newData.val())",
+          ".validate": "newData.isNumber()"
+        },
+        "nombreClash": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 60"
+        },
+        "victorias": { ".validate": "newData.isNumber()" },
+        "ultimaActualizacion": { ".validate": "newData.isNumber()" },
+        "$otro": { ".validate": false }
+      }
+    },
+    "amigos": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$otro": {
+          ".write": "auth != null && $uid !== $otro && (auth.uid === $uid || auth.uid === $otro)",
+          ".validate": "newData.isNumber()"
+        }
+      }
+    },
+    "historial": {
+      ".read": "auth != null",
+      ".indexOn": ["fecha"],
+      ".write": false
     }
   }
 }
