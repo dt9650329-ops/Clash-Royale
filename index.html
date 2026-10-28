@@ -17,15 +17,16 @@ h1{font-size:2rem;line-height:1.15;margin:0 0 6px}
 h2{font-size:1.25rem;margin:0 0 12px}
 .suave{color:var(--suave);margin:0 0 20px}
 .oculto{display:none!important}
-.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
-.tab{padding:10px;border:2px solid var(--linea);border-radius:10px;background:transparent;color:var(--suave);font:inherit;font-weight:700;cursor:pointer}
-.tab.activa{background:var(--panel);color:var(--texto);border-color:var(--oro)}
 label{display:block;margin-bottom:14px;font-weight:700}
 input{display:block;width:100%;margin-top:6px;padding:12px;border:2px solid var(--linea);border-radius:10px;background:var(--fondo);color:var(--texto);font:inherit}
+input[readonly]{opacity:.65}
 button{font:inherit}
-.primario,.secundario{padding:12px 18px;border-radius:10px;font-weight:700;cursor:pointer;border:0}
+.primario,.secundario,.google{padding:12px 18px;border-radius:10px;font-weight:700;cursor:pointer;border:0}
 .primario{width:100%;background:var(--oro);color:#2A1D00}
 .secundario{background:var(--panel);color:var(--texto);border:2px solid var(--linea)}
+.google{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;background:#fff;color:#1F1F1F;margin-top:8px}
+.google svg{width:20px;height:20px;flex:none}
+.cancelar{width:100%;margin-top:10px}
 button:disabled{opacity:.6;cursor:wait}
 :focus-visible{outline:3px solid var(--oro);outline-offset:2px}
 .msg{min-height:1.5em;margin:0 0 12px;color:var(--error)}
@@ -42,20 +43,36 @@ dd{margin:0;text-align:right;overflow-wrap:anywhere}
 <body>
 <main>
 
-  <section id="vista-auth">
+  <section id="vista-carga">
     <h1>Torneos de Clash Royale</h1>
-    <p class="suave">Crea tu cuenta, vincula tu tag de Supercell y compite.</p>
-    <div class="tabs">
-      <button type="button" id="tab-crear" class="tab activa">Crear cuenta</button>
-      <button type="button" id="tab-entrar" class="tab">Entrar</button>
-    </div>
-    <form id="form-auth" novalidate>
-      <label class="solo-crear">Nombre<input id="nombre" autocomplete="name"></label>
-      <label>Correo<input id="correo" type="email" autocomplete="email"></label>
-      <label class="solo-crear">Teléfono<input id="telefono" type="tel" autocomplete="tel" placeholder="3001234567"></label>
-      <label>Contraseña<input id="clave" type="password" autocomplete="new-password"></label>
-      <p id="msg-auth" class="msg" role="status"></p>
-      <button class="primario" id="btn-auth">Crear cuenta</button>
+    <p class="suave">Cargando…</p>
+  </section>
+
+  <section id="vista-auth" class="oculto">
+    <h1>Torneos de Clash Royale</h1>
+    <p class="suave">Entra con tu cuenta de Google para crear tu perfil, vincular tu tag de Supercell y competir.</p>
+    <p id="msg-auth" class="msg" role="status"></p>
+    <button type="button" class="google" id="btn-google">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      <span>Continuar con Google</span>
+    </button>
+  </section>
+
+  <section id="vista-registro" class="oculto">
+    <h1>Completa tu registro</h1>
+    <p class="suave">Es tu primera vez aquí. Confirma tus datos para crear tu perfil.</p>
+    <form id="form-registro" novalidate>
+      <label>Nombre<input id="r-nombre" autocomplete="name"></label>
+      <label>Correo<input id="r-correo" type="email" readonly></label>
+      <label>Teléfono<input id="r-telefono" type="tel" autocomplete="tel" placeholder="3001234567"></label>
+      <p id="msg-registro" class="msg" role="status"></p>
+      <button class="primario" id="btn-registro">Crear mi perfil</button>
+      <button type="button" class="secundario cancelar" id="btn-cancelar">Cancelar</button>
     </form>
   </section>
 
@@ -120,14 +137,20 @@ const auth = firebase.auth();
 const db = firebase.database();
 const functions = firebase.functions();
 
+// Siempre pregunta con qué cuenta de Google quiere entrar.
+const proveedor = new firebase.auth.GoogleAuthProvider();
+proveedor.setCustomParameters({ prompt: "select_account" });
+
 const $ = (id) => document.getElementById(id);
-let modo = "crear";
 let tagCargado = null;
 let detener = [];
+let turno = 0;
+let perfilPrevio = {};
 
 function mostrar(vista) {
-  $("vista-auth").classList.toggle("oculto", vista !== "auth");
-  $("vista-perfil").classList.toggle("oculto", vista !== "perfil");
+  ["carga", "auth", "registro", "perfil"].forEach((v) => {
+    $("vista-" + v).classList.toggle("oculto", v !== vista);
+  });
 }
 
 function mensaje(id, texto, ok) {
@@ -146,61 +169,67 @@ function detalleError(e) {
 
 function errorAuth(e) {
   const mapa = {
-    "auth/email-already-in-use": "Ese correo ya tiene una cuenta. Entra con tu contraseña",
-    "auth/invalid-email": "El correo no es válido",
-    "auth/weak-password": "La contraseña debe tener mínimo 6 caracteres",
-    "auth/invalid-credential": "Correo o contraseña incorrectos",
-    "auth/wrong-password": "Correo o contraseña incorrectos",
-    "auth/user-not-found": "Correo o contraseña incorrectos",
+    "auth/operation-not-allowed": "El ingreso con Google no está activado en Firebase",
+    "auth/unauthorized-domain": "Este sitio no está autorizado en Firebase (Authentication → Configuración → Dominios autorizados)",
+    "auth/popup-blocked": "Tu navegador bloqueó la ventana de Google. Permite las ventanas emergentes e intenta de nuevo",
+    "auth/network-request-failed": "Sin conexión. Revisa tu internet e intenta de nuevo",
+    "auth/account-exists-with-different-credential": "Ese correo ya está registrado con otro método de ingreso",
     "auth/too-many-requests": "Demasiados intentos. Espera un momento y prueba de nuevo"
   };
   return (mapa[e.code] || "No pudimos completar la acción. Intenta de nuevo") + detalleError(e);
 }
 
-function cambiarModo(nuevo) {
-  modo = nuevo;
-  $("tab-crear").classList.toggle("activa", nuevo === "crear");
-  $("tab-entrar").classList.toggle("activa", nuevo === "entrar");
-  document.querySelectorAll(".solo-crear").forEach((el) => el.classList.toggle("oculto", nuevo !== "crear"));
-  $("btn-auth").textContent = nuevo === "crear" ? "Crear cuenta" : "Entrar";
-  $("clave").autocomplete = nuevo === "crear" ? "new-password" : "current-password";
+// --- Entrar con Google ---
+$("btn-google").onclick = async () => {
   mensaje("msg-auth", "");
-}
-$("tab-crear").onclick = () => cambiarModo("crear");
-$("tab-entrar").onclick = () => cambiarModo("entrar");
-
-$("form-auth").addEventListener("submit", async (ev) => {
-  ev.preventDefault();
-  mensaje("msg-auth", "");
-  const correo = $("correo").value.trim().toLowerCase();
-  const clave = $("clave").value;
-  if (!correo || !clave) return mensaje("msg-auth", "Escribe tu correo y tu contraseña");
-
-  $("btn-auth").disabled = true;
+  $("btn-google").disabled = true;
   try {
-    if (modo === "entrar") {
-      await auth.signInWithEmailAndPassword(correo, clave);
-    } else {
-      const nombre = $("nombre").value.trim();
-      const telefono = $("telefono").value.replace(/[\s-]/g, "");
-      if (nombre.length < 2) return mensaje("msg-auth", "Escribe tu nombre");
-      if (!/^\+?[0-9]{7,15}$/.test(telefono)) return mensaje("msg-auth", "Escribe un teléfono válido, solo números");
-      if (clave.length < 6) return mensaje("msg-auth", "La contraseña debe tener mínimo 6 caracteres");
-      const cred = await auth.createUserWithEmailAndPassword(correo, clave);
-      await db.ref("users/" + cred.user.uid).set({
-        nombre, correo, telefono,
-        creadoEn: firebase.database.ServerValue.TIMESTAMP
-      });
-    }
+    await auth.signInWithPopup(proveedor);
   } catch (e) {
-    mensaje("msg-auth", errorAuth(e));
+    if (!["auth/popup-closed-by-user", "auth/cancelled-popup-request"].includes(e.code)) {
+      mensaje("msg-auth", errorAuth(e));
+    }
   } finally {
-    $("btn-auth").disabled = false;
+    $("btn-google").disabled = false;
+  }
+};
+
+$("btn-salir").onclick = () => auth.signOut();
+$("btn-cancelar").onclick = () => auth.signOut();
+
+// --- Registro de jugador nuevo ---
+function prepararRegistro(user, p) {
+  perfilPrevio = p || {};
+  $("r-nombre").value = perfilPrevio.nombre || user.displayName || "";
+  $("r-correo").value = user.email || "";
+  $("r-telefono").value = perfilPrevio.telefono || "";
+  mensaje("msg-registro", "");
+}
+
+$("form-registro").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  mensaje("msg-registro", "");
+  const user = auth.currentUser;
+  if (!user) return;
+  const nombre = $("r-nombre").value.trim();
+  const telefono = $("r-telefono").value.replace(/[\s-]/g, "");
+  if (nombre.length < 2) return mensaje("msg-registro", "Escribe tu nombre");
+  if (!/^\+?[0-9]{7,15}$/.test(telefono)) return mensaje("msg-registro", "Escribe un teléfono válido, solo números");
+
+  $("btn-registro").disabled = true;
+  try {
+    const datos = { nombre, correo: (user.email || "").toLowerCase(), telefono };
+    if (!perfilPrevio.creadoEn) datos.creadoEn = firebase.database.ServerValue.TIMESTAMP;
+    await db.ref("users/" + user.uid).update(datos);
+    entrarPerfil(user);
+  } catch (e) {
+    mensaje("msg-registro", "No pudimos guardar tu perfil. Intenta de nuevo" + detalleError(e));
+  } finally {
+    $("btn-registro").disabled = false;
   }
 });
 
-$("btn-salir").onclick = () => auth.signOut();
-
+// --- Clash Royale ---
 async function traerClash(tag) {
   try {
     const r = await functions.httpsCallable("consultarJugador")({ tag });
@@ -243,6 +272,7 @@ $("form-tag").addEventListener("submit", async (ev) => {
   }
 });
 
+// --- Perfil ---
 function pintarPerfil(p, user) {
   $("p-nombre").textContent = p.nombre || "Mi perfil";
   $("p-correo").textContent = p.correo || user.email;
@@ -256,17 +286,45 @@ function pintarPerfil(p, user) {
   }
 }
 
-auth.onAuthStateChanged((user) => {
+function entrarPerfil(user) {
   detener.forEach((f) => f());
   detener = [];
   tagCargado = null;
-  if (!user) return mostrar("auth");
   mostrar("perfil");
   const refPerfil = db.ref("users/" + user.uid);
   const refCred = db.ref("wallets/" + user.uid + "/creditos");
   const a = refPerfil.on("value", (s) => pintarPerfil(s.val() || {}, user));
   const b = refCred.on("value", (s) => { $("p-creditos").textContent = s.val() || 0; });
   detener.push(() => refPerfil.off("value", a), () => refCred.off("value", b));
+}
+
+// --- Qué pantalla mostrar al abrir la página ---
+// Sin sesión: botón de Google. Con sesión y perfil completo: perfil. Con sesión sin perfil: registro.
+auth.onAuthStateChanged(async (user) => {
+  const mio = ++turno;
+  detener.forEach((f) => f());
+  detener = [];
+  tagCargado = null;
+  if (!user) return mostrar("auth");
+
+  mostrar("carga");
+  let snap;
+  try {
+    snap = await db.ref("users/" + user.uid).once("value");
+  } catch (e) {
+    if (mio !== turno) return;
+    await auth.signOut();
+    mensaje("msg-auth", "No pudimos leer tu perfil. Intenta de nuevo" + detalleError(e));
+    return;
+  }
+  if (mio !== turno) return;
+
+  const p = snap.val();
+  if (!p || !p.nombre || !p.telefono) {
+    prepararRegistro(user, p);
+    return mostrar("registro");
+  }
+  entrarPerfil(user);
 });
 </script>
 </body>
