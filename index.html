@@ -83,6 +83,11 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
 .seccion.activa{display:block}
 .seccion>.panel{margin:0;min-height:calc(100vh - 110px);min-height:calc(100dvh - 110px)}
 @media (prefers-reduced-motion:reduce){.menu,.menu-fondo,.btn-menu .l{transition:none}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.chip{padding:8px 14px;border-radius:999px;border:2px solid var(--linea);background:none;color:var(--texto);font-weight:700;cursor:pointer}
+.chip.activa{background:var(--oro);color:#2A1D00;border-color:var(--oro)}
+.historial li{align-items:center}
+.historial li .mini{flex:none}
 </style>
 </head>
 <body>
@@ -136,6 +141,7 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
         <nav class="menu" id="menu" aria-label="Secciones">
           <button type="button" data-sec="perfil">Mi perfil</button>
           <button type="button" data-sec="clash">Clash Royale</button>
+          <button type="button" data-sec="partida">Cuadrar partida</button>
           <button type="button" data-sec="tabla">Tabla de posiciones</button>
           <button type="button" data-sec="historial">Historial</button>
           <button type="button" data-sec="creditos">Créditos</button>
@@ -193,6 +199,31 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
     <div class="panel">
       <h2>Créditos</h2>
       <p class="copas" id="p-creditos">0</p>
+    </div>
+    </div>
+
+    <div class="seccion" data-sec="partida">
+    <div class="panel">
+      <h2>Cuadrar partida</h2>
+      <p class="suave">Tus créditos: <b id="pa-saldo">0</b></p>
+      <form id="form-reto" novalidate>
+        <label>Monto a apostar<input id="pa-monto" type="number" inputmode="numeric" min="100" step="100" placeholder="500"></label>
+        <div class="chips" id="pa-chips"></div>
+        <div class="chips" id="pa-modo">
+          <button type="button" class="chip activa" data-modo="ya">Jugar ya</button>
+          <button type="button" class="chip" data-modo="programado">Programar</button>
+        </div>
+        <label id="pa-cuando-caja" class="oculto">Fecha y hora<input id="pa-cuando" type="datetime-local"></label>
+        <p id="msg-reto" class="msg" role="status"></p>
+        <button class="primario" id="btn-reto">Publicar reto</button>
+      </form>
+      <h2 style="margin-top:24px">Retos abiertos</h2>
+      <input id="pa-buscar" placeholder="Buscar por nombre o tag" autocomplete="off">
+      <ul id="pa-abiertos" class="historial"></ul>
+      <p id="pa-abiertos-vacio" class="suave">No hay retos abiertos por ahora.</p>
+      <h2 style="margin-top:24px">Mis partidas</h2>
+      <ul id="pa-mios" class="historial"></ul>
+      <p id="msg-partidas" class="msg" role="status"></p>
     </div>
     </div>
 
@@ -320,7 +351,7 @@ $("btn-google").onclick = async () => {
 $("btn-salir").onclick = () => auth.signOut();
 
 // --- Menú hamburguesa y secciones ---
-const SECCIONES = ["perfil", "clash", "tabla", "historial", "creditos"];
+const SECCIONES = ["perfil", "clash", "partida", "tabla", "historial", "creditos"];
 
 function abrirMenu(abrir) {
   $("menu").classList.toggle("abierto", abrir);
@@ -339,6 +370,7 @@ function irA(sec) {
   });
   abrirMenu(false);
   window.scrollTo(0, 0);
+  if (sec === "partida") fnReto("expirarRetos").catch(() => {});
 }
 
 $("btn-menu").onclick = () => abrirMenu(!$("menu").classList.contains("abierto"));
@@ -511,6 +543,97 @@ $("dlg-copiar").onclick = async () => {
   $("dlg-copiar").textContent = "¡Copiado!";
 };
 
+// --- Cuadrar partida ---
+const MONTOS = [100, 500, 1000, 5000];
+let saldo = 0, retos = [], modoReto = "ya";
+const fnReto = (nombre, datos) => functions.httpsCallable(nombre)(datos);
+const msgFn = (e) => (((e.code || "").startsWith("functions/") && !["functions/internal", "functions/unknown"].includes(e.code)) ? e.message : "No pudimos completar la acción. Intenta de nuevo") + detalleError(e);
+const cuandoTxt = (r) => r.modo === "programado" ? new Date(r.cuando).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) : "Ya";
+
+MONTOS.forEach((m) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = m;
+  b.onclick = () => { $("pa-monto").value = m; };
+  $("pa-chips").appendChild(b);
+});
+document.querySelectorAll("#pa-modo [data-modo]").forEach((b) => {
+  b.onclick = () => {
+    modoReto = b.dataset.modo;
+    document.querySelectorAll("#pa-modo .chip").forEach((x) => x.classList.toggle("activa", x === b));
+    $("pa-cuando-caja").classList.toggle("oculto", modoReto !== "programado");
+  };
+});
+
+$("form-reto").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  mensaje("msg-reto", "");
+  const monto = Number($("pa-monto").value);
+  if (!Number.isInteger(monto) || monto <= 0) return mensaje("msg-reto", "Escribe un monto válido");
+  if (monto > saldo) return mensaje("msg-reto", "No tienes créditos suficientes");
+  let cuando = null;
+  if (modoReto === "programado") {
+    cuando = new Date($("pa-cuando").value).getTime();
+    if (!cuando) return mensaje("msg-reto", "Elige la fecha y la hora");
+  }
+  $("btn-reto").disabled = true;
+  try {
+    await fnReto("crearReto", { monto, modo: modoReto, cuando });
+    mensaje("msg-reto", "Reto publicado", true);
+  } catch (e) {
+    mensaje("msg-reto", msgFn(e));
+  } finally {
+    $("btn-reto").disabled = false;
+  }
+});
+
+async function accionReto(nombre, retoId) {
+  mensaje("msg-partidas", "");
+  try { await fnReto(nombre, { retoId }); } catch (e) { mensaje("msg-partidas", msgFn(e)); }
+}
+
+function fila(titulo, sub, detalle, btnTxt, off, fn) {
+  const li = document.createElement("li");
+  const t = document.createElement("span");
+  const b = document.createElement("b"); b.textContent = titulo;
+  const s = document.createElement("small"); s.style.cssText = "display:block;color:var(--suave)"; s.textContent = sub;
+  t.append(b, s);
+  const d = document.createElement("span"); d.className = "fecha"; d.textContent = detalle;
+  li.append(t, d);
+  if (btnTxt) {
+    const x = document.createElement("button");
+    x.type = "button"; x.className = "secundario mini"; x.textContent = btnTxt; x.disabled = off; x.onclick = fn;
+    li.appendChild(x);
+  }
+  return li;
+}
+
+function pintarPartidas() {
+  if (!auth.currentUser) return;
+  const uid = auth.currentUser.uid, ahora = Date.now(), q = $("pa-buscar").value.trim().toLowerCase();
+  const ab = $("pa-abiertos"), mi = $("pa-mios");
+  ab.innerHTML = ""; mi.innerHTML = "";
+  retos.slice().sort((a, b) => b.creadoEn - a.creadoEn).forEach((r) => {
+    const vigente = r.estado === "abierto" && r.vence > ahora;
+    if (vigente && r.creadorUid !== uid) {
+      if (q && !(r.creadorNombre + " " + r.creadorTag).toLowerCase().includes(q)) return;
+      ab.appendChild(fila(r.creadorNombre, r.creadorTag, r.monto + " · " + cuandoTxt(r), "Aceptar", r.monto > saldo, () => accionReto("aceptarReto", r.id)));
+    } else if (r.creadorUid === uid || r.rivalUid === uid) {
+      const soyCreador = r.creadorUid === uid;
+      const otro = soyCreador ? { uid: r.rivalUid, nombre: r.rivalNombre, tag: r.rivalTag } : { uid: r.creadorUid, nombre: r.creadorNombre, tag: r.creadorTag };
+      if (r.estado === "aceptado") {
+        const j = jugadoresActual.find((x) => x.uid === otro.uid);
+        mi.appendChild(fila("vs " + otro.nombre, otro.tag + " · Aceptada", r.monto + " · " + cuandoTxt(r), j && j.enlace ? "Ver enlace" : "", false, () => abrirAmigo(j)));
+      } else if (vigente) {
+        mi.appendChild(fila("Esperando rival", r.monto + " · " + cuandoTxt(r), "", "Cancelar", false, () => accionReto("cancelarReto", r.id)));
+      } else if (ahora - r.creadoEn < 24 * 3600 * 1000) {
+        mi.appendChild(fila(r.estado === "cancelado" ? "Cancelado" : "Vencido", "Créditos devueltos", r.monto + " · " + cuandoTxt(r), "", false, null));
+      }
+    }
+  });
+  $("pa-abiertos-vacio").classList.toggle("oculto", ab.children.length > 0);
+}
+$("pa-buscar").oninput = pintarPartidas;
+
 // --- Tabla de posiciones ---
 // Orden: más victorias primero; con empate, el que se registró antes. Con todos en 0 queda el orden de registro.
 function celda(texto, clase) {
@@ -667,13 +790,20 @@ function entrarPerfil(user) {
   amigosSet = new Set();
   yaJugaron = new Set();
   jugadoresActual = [];
+  retos = [];
   mostrar("perfil");
   irA(location.hash.slice(1));
   const refPerfil = db.ref("users/" + user.uid);
   const refCred = db.ref("wallets/" + user.uid + "/creditos");
   const refJug = db.ref("jugadores").orderByChild("creadoEn");
   const a = refPerfil.on("value", (s) => pintarPerfil(s.val() || {}, user));
-  const b = refCred.on("value", (s) => { $("p-creditos").textContent = s.val() || 0; });
+  const b = refCred.on("value", (s) => { saldo = s.val() || 0; $("p-creditos").textContent = saldo; $("pa-saldo").textContent = saldo; pintarPartidas(); });
+  const refRetos = db.ref("retos").orderByChild("creadoEn").limitToLast(100);
+  const f = refRetos.on("value", (s) => {
+    retos = [];
+    s.forEach((h) => { retos.push(Object.assign({ id: h.key }, h.val())); });
+    pintarPartidas();
+  }, (e) => mensaje("msg-partidas", "No pudimos cargar los retos. Revisa las reglas de la base de datos" + detalleError(e)));
   const c = refJug.on("value", (s) => {
     const lista = [];
     s.forEach((h) => { lista.push(Object.assign({ uid: h.key }, h.val())); });
@@ -698,7 +828,7 @@ function entrarPerfil(user) {
     pintarHistorial(lista, user.uid);
     if (jugadoresActual.length) pintarTabla(jugadoresActual.slice(), user.uid);
   }, (e) => mensaje("msg-historial", "No pudimos cargar el historial. Revisa las reglas de la base de datos" + detalleError(e)));
-  detener.push(() => refPerfil.off("value", a), () => refCred.off("value", b), () => refJug.off("value", c), () => refHist.off("value", d), () => refAmigos.off("value", e));
+  detener.push(() => refPerfil.off("value", a), () => refCred.off("value", b), () => refJug.off("value", c), () => refHist.off("value", d), () => refAmigos.off("value", e), () => refRetos.off("value", f));
 }
 
 // --- Qué pantalla mostrar al abrir la página ---
