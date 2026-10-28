@@ -47,6 +47,23 @@ dt{color:var(--suave)}
 dd{margin:0;text-align:right;overflow-wrap:anywhere}
 .copas{font-size:3rem;line-height:1;color:var(--oro);margin:0}
 .etiqueta{color:var(--suave);margin:2px 0 16px}
+.rejilla .tabla-panel{grid-column:1/-1}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 6px;text-align:left;border-bottom:1px solid var(--linea)}
+th{color:var(--suave);font-weight:700;font-size:.9em}
+.num{text-align:center;width:3.2em}
+tr.yo td{color:var(--oro)}
+td small{display:block;color:var(--suave)}
+td.accion{text-align:right;white-space:nowrap}
+.mini{padding:8px 14px;font-size:.9em}
+a.primario{display:block;text-align:center;text-decoration:none}
+dialog{background:var(--panel);color:var(--texto);border:2px solid var(--linea);border-radius:14px;padding:20px;width:min(92vw,360px);text-align:center}
+dialog::backdrop{background:rgba(0,0,0,.65)}
+.historial{list-style:none;margin:0;padding:0}
+.historial li{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--linea)}
+.historial .fecha{color:var(--suave);font-size:.85em;white-space:nowrap}
+.historial b{color:var(--oro);font-weight:700}
+.qr{display:inline-block;background:#fff;padding:12px;border-radius:10px;margin:0 0 16px;line-height:0}
 </style>
 </head>
 <body>
@@ -120,17 +137,56 @@ dd{margin:0;text-align:right;overflow-wrap:anywhere}
         <p id="msg-tag" class="msg" role="status"></p>
         <button class="primario" id="btn-tag">Vincular tag</button>
       </form>
+      <form id="form-enlace" class="oculto" novalidate>
+        <label>Tu enlace de amigo<input id="enlace" inputmode="url" placeholder="https://link.clashroyale.com/invite/friend/..." autocomplete="off"></label>
+        <p class="suave">En el juego: Social → Añadir amigos → Enviar enlace. Cópialo y pégalo aquí para que otros te agreguen con QR.</p>
+        <p id="msg-enlace" class="msg" role="status"></p>
+        <button class="primario" id="btn-enlace">Guardar enlace</button>
+      </form>
+      <div id="mi-qr-caja" class="oculto">
+        <p class="etiqueta">Tu QR: quien lo escanee te agrega como amigo</p>
+        <div id="mi-qr" class="qr"></div>
+      </div>
     </div>
 
     <div class="panel">
       <h2>Créditos</h2>
       <p class="copas" id="p-creditos">0</p>
     </div>
+
+    <div class="panel tabla-panel">
+      <h2>Tabla de posiciones</h2>
+      <p class="suave">Las victorias solo cuentan entre jugadores que son amigos en Clash Royale.</p>
+      <p id="msg-tabla" class="msg" role="status"></p>
+      <table>
+        <thead><tr><th class="num">#</th><th>Jugador</th><th class="num">V</th><th></th></tr></thead>
+        <tbody id="tabla-cuerpo"></tbody>
+      </table>
+    </div>
+
+    <div class="panel tabla-panel">
+      <div class="barra">
+        <h2>Historial</h2>
+        <button type="button" id="btn-actualizar" class="secundario mini">Actualizar</button>
+      </div>
+      <p id="msg-historial" class="msg" role="status"></p>
+      <ul id="historial-lista" class="historial"></ul>
+      <p id="historial-vacio" class="suave">Aún no hay batallas amistosas entre jugadores de la tabla.</p>
+    </div>
     </div>
   </section>
 
 </main>
 
+<dialog id="dlg-amigo">
+  <h2 id="dlg-nombre"></h2>
+  <p class="suave">Escanea este QR desde Clash Royale (Social → Añadir amigos → Escanear) o abre el enlace.</p>
+  <div id="qr" class="qr"></div>
+  <a id="dlg-enlace" class="primario" href="#" target="_blank" rel="noopener">Abrir en Clash Royale</a>
+  <button type="button" class="secundario cancelar" id="dlg-cerrar">Cerrar</button>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -157,6 +213,9 @@ let tagCargado = null;
 let detener = [];
 let turno = 0;
 let perfilPrevio = {};
+let perfilActual = {};
+let ultimoSync = "";
+let qrPintado = "";
 
 function mostrar(vista) {
   ["carga", "auth", "registro", "perfil"].forEach((v) => {
@@ -283,8 +342,163 @@ $("form-tag").addEventListener("submit", async (ev) => {
   }
 });
 
+// --- Enlace de amigo y QR ---
+function extraerEnlace(texto) {
+  const m = String(texto).match(/https?:\/\/\S+/);
+  return m ? m[0] : "";
+}
+
+// Devuelve el tag (#XXXX) del enlace si es un enlace de amigo válido de Clash Royale; si no, null.
+function tagDeEnlace(url) {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "https:" || u.hostname !== "link.clashroyale.com") return null;
+    if (!u.pathname.startsWith("/invite/friend")) return null;
+    const t = u.searchParams.get("tag");
+    return t ? "#" + t.toUpperCase() : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+$("form-enlace").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  mensaje("msg-enlace", "");
+  const url = extraerEnlace($("enlace").value);
+  const tagEnlace = tagDeEnlace(url);
+  if (!tagEnlace) return mensaje("msg-enlace", "Ese no es un enlace de amigo de Clash Royale");
+  if (tagEnlace !== perfilActual.tag) return mensaje("msg-enlace", "Ese enlace es de otro jugador, no de tu tag " + perfilActual.tag);
+  $("btn-enlace").disabled = true;
+  try {
+    await db.ref("users/" + auth.currentUser.uid + "/enlace").set(url);
+    mensaje("msg-enlace", "Enlace guardado", true);
+  } catch (e) {
+    mensaje("msg-enlace", "No pudimos guardar el enlace. Intenta de nuevo" + detalleError(e));
+  } finally {
+    $("btn-enlace").disabled = false;
+  }
+});
+
+function abrirAmigo(j) {
+  $("dlg-nombre").textContent = j.nombre || "Jugador";
+  $("dlg-enlace").href = j.enlace;
+  const qr = $("qr");
+  qr.innerHTML = "";
+  new QRCode(qr, { text: j.enlace, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+  $("dlg-amigo").showModal();
+}
+$("dlg-cerrar").onclick = () => $("dlg-amigo").close();
+
+// --- Tabla de posiciones ---
+// Orden: más victorias primero; con empate, el que se registró antes. Con todos en 0 queda el orden de registro.
+function celda(texto, clase) {
+  const td = document.createElement("td");
+  if (clase) td.className = clase;
+  td.textContent = texto;
+  return td;
+}
+
+function pintarTabla(lista, miUid) {
+  lista.sort((a, b) => (b.victorias || 0) - (a.victorias || 0) || (a.creadoEn || 0) - (b.creadoEn || 0));
+  const cuerpo = $("tabla-cuerpo");
+  cuerpo.innerHTML = "";
+  lista.forEach((j, i) => {
+    const tr = document.createElement("tr");
+    if (j.uid === miUid) tr.className = "yo";
+    tr.appendChild(celda(i + 1, "num"));
+
+    const tdNombre = celda(j.nombre || "Jugador");
+    if (j.tag) {
+      const s = document.createElement("small");
+      s.textContent = j.tag;
+      tdNombre.appendChild(s);
+    }
+    tr.appendChild(tdNombre);
+    tr.appendChild(celda(j.victorias || 0, "num"));
+
+    const tdAccion = celda("", "accion");
+    if (j.uid === miUid) {
+      tdAccion.textContent = "Tú";
+    } else if (j.enlace && tagDeEnlace(j.enlace)) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "secundario mini";
+      b.textContent = "Añadir";
+      b.onclick = () => abrirAmigo(j);
+      tdAccion.appendChild(b);
+    } else {
+      tdAccion.textContent = "Sin enlace";
+      tdAccion.style.color = "var(--suave)";
+    }
+    tr.appendChild(tdAccion);
+    cuerpo.appendChild(tr);
+  });
+}
+
+// --- Historial de batallas amistosas ---
+function pintarHistorial(lista, miUid) {
+  lista.sort((a, b) => b.fecha - a.fecha);
+  const ul = $("historial-lista");
+  ul.innerHTML = "";
+  $("historial-vacio").classList.toggle("oculto", lista.length > 0);
+  lista.forEach((h) => {
+    const li = document.createElement("li");
+    const txt = document.createElement("span");
+    const g = document.createElement("b");
+    g.textContent = h.ganadorNombre;
+    txt.append(g, " " + h.coronasGanador + "–" + h.coronasPerdedor + " " + h.perdedorNombre);
+    if (h.ganadorUid === miUid || h.perdedorUid === miUid) txt.style.fontWeight = "700";
+    const f = document.createElement("span");
+    f.className = "fecha";
+    f.textContent = new Date(h.fecha).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" });
+    li.append(txt, f);
+    ul.appendChild(li);
+  });
+}
+
+async function actualizarTorneo(silencioso) {
+  if (!silencioso) mensaje("msg-historial", "Actualizando…", true);
+  $("btn-actualizar").disabled = true;
+  try {
+    await functions.httpsCallable("actualizarTorneo")();
+    if (!silencioso) mensaje("msg-historial", "Historial actualizado", true);
+  } catch (e) {
+    if (!silencioso) {
+      const propio = e.code && e.code.startsWith("functions/") &&
+        !["functions/internal", "functions/unknown"].includes(e.code);
+      mensaje("msg-historial", (propio ? e.message : "No pudimos actualizar. Intenta de nuevo") + detalleError(e));
+    }
+  } finally {
+    $("btn-actualizar").disabled = false;
+  }
+}
+$("btn-actualizar").onclick = () => actualizarTorneo(false);
+
+// Copia pública del perfil (sin correo ni teléfono) para que aparezca en la tabla.
+function sincronizarPublico(p, user) {
+  if (!p.nombre) return;
+  const pub = { nombre: p.nombre, tag: p.tag || null, enlace: p.enlace || null };
+  if (p.creadoEn) pub.creadoEn = p.creadoEn;
+  const clave = JSON.stringify(pub);
+  if (clave === ultimoSync) return;
+  ultimoSync = clave;
+  db.ref("jugadores/" + user.uid).update(pub).catch((e) => console.error(e));
+}
+
 // --- Perfil ---
 function pintarPerfil(p, user) {
+  perfilActual = p;
+  sincronizarPublico(p, user);
+  $("form-enlace").classList.toggle("oculto", !p.tag);
+  if (document.activeElement !== $("enlace")) $("enlace").value = p.enlace || "";
+  $("btn-enlace").textContent = p.enlace ? "Actualizar enlace" : "Guardar enlace";
+  const enlaceOk = Boolean(p.enlace && tagDeEnlace(p.enlace));
+  $("mi-qr-caja").classList.toggle("oculto", !enlaceOk);
+  if (enlaceOk && p.enlace !== qrPintado) {
+    qrPintado = p.enlace;
+    $("mi-qr").innerHTML = "";
+    new QRCode($("mi-qr"), { text: p.enlace, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+  }
   $("p-nombre").textContent = p.nombre || "Mi perfil";
   $("p-correo").textContent = p.correo || user.email;
   $("p-telefono").textContent = p.telefono || "–";
@@ -294,6 +508,7 @@ function pintarPerfil(p, user) {
   if (hayTag && p.tag !== tagCargado) {
     tagCargado = p.tag;
     cargarClash(p.tag);
+    actualizarTorneo(true);
   }
 }
 
@@ -301,12 +516,27 @@ function entrarPerfil(user) {
   detener.forEach((f) => f());
   detener = [];
   tagCargado = null;
+  ultimoSync = "";
+  qrPintado = "";
   mostrar("perfil");
   const refPerfil = db.ref("users/" + user.uid);
   const refCred = db.ref("wallets/" + user.uid + "/creditos");
+  const refJug = db.ref("jugadores").orderByChild("creadoEn");
   const a = refPerfil.on("value", (s) => pintarPerfil(s.val() || {}, user));
   const b = refCred.on("value", (s) => { $("p-creditos").textContent = s.val() || 0; });
-  detener.push(() => refPerfil.off("value", a), () => refCred.off("value", b));
+  const c = refJug.on("value", (s) => {
+    const lista = [];
+    s.forEach((h) => { lista.push(Object.assign({ uid: h.key }, h.val())); });
+    mensaje("msg-tabla", "");
+    pintarTabla(lista, user.uid);
+  }, (e) => mensaje("msg-tabla", "No pudimos cargar la tabla. Revisa las reglas de la base de datos" + detalleError(e)));
+  const refHist = db.ref("historial").orderByChild("fecha").limitToLast(30);
+  const d = refHist.on("value", (s) => {
+    const lista = [];
+    s.forEach((h) => { lista.push(h.val()); });
+    pintarHistorial(lista, user.uid);
+  }, (e) => mensaje("msg-historial", "No pudimos cargar el historial. Revisa las reglas de la base de datos" + detalleError(e)));
+  detener.push(() => refPerfil.off("value", a), () => refCred.off("value", b), () => refJug.off("value", c), () => refHist.off("value", d));
 }
 
 // --- Qué pantalla mostrar al abrir la página ---
