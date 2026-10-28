@@ -52,8 +52,8 @@ dd{margin:0;text-align:right;overflow-wrap:anywhere}
     <form id="form-auth" novalidate>
       <label class="solo-crear">Nombre<input id="nombre" autocomplete="name"></label>
       <label>Correo<input id="correo" type="email" autocomplete="email"></label>
-      <label class="solo-crear">TelÃ©fono<input id="telefono" type="tel" autocomplete="tel" placeholder="3001234567"></label>
-      <label>ContraseÃ±a<input id="clave" type="password" autocomplete="new-password"></label>
+      <label class="solo-crear">Teléfono<input id="telefono" type="tel" autocomplete="tel" placeholder="3001234567"></label>
+      <label>Contraseña<input id="clave" type="password" autocomplete="new-password"></label>
       <p id="msg-auth" class="msg" role="status"></p>
       <button class="primario" id="btn-auth">Crear cuenta</button>
     </form>
@@ -69,22 +69,22 @@ dd{margin:0;text-align:right;overflow-wrap:anywhere}
       <h2>Mis datos</h2>
       <dl>
         <dt>Correo</dt><dd id="p-correo"></dd>
-        <dt>TelÃ©fono</dt><dd id="p-telefono"></dd>
+        <dt>Teléfono</dt><dd id="p-telefono"></dd>
       </dl>
     </div>
 
     <div class="panel">
       <h2>Clash Royale</h2>
       <div id="clash-vinculado" class="oculto">
-        <p class="copas" id="c-copas">â€“</p>
+        <p class="copas" id="c-copas">–</p>
         <p class="etiqueta">copas</p>
         <dl>
-          <dt>Jugador</dt><dd id="c-nombre">â€“</dd>
-          <dt>Mejor marca</dt><dd id="c-mejor">â€“</dd>
-          <dt>Nivel</dt><dd id="c-nivel">â€“</dd>
-          <dt>Victorias / derrotas</dt><dd id="c-record">â€“</dd>
-          <dt>Clan</dt><dd id="c-clan">â€“</dd>
-          <dt>Arena</dt><dd id="c-arena">â€“</dd>
+          <dt>Jugador</dt><dd id="c-nombre">–</dd>
+          <dt>Mejor marca</dt><dd id="c-mejor">–</dd>
+          <dt>Nivel</dt><dd id="c-nivel">–</dd>
+          <dt>Victorias / derrotas</dt><dd id="c-record">–</dd>
+          <dt>Clan</dt><dd id="c-clan">–</dd>
+          <dt>Arena</dt><dd id="c-arena">–</dd>
         </dl>
         <p id="msg-clash" class="msg" role="status"></p>
       </div>
@@ -96,7 +96,7 @@ dd{margin:0;text-align:right;overflow-wrap:anywhere}
     </div>
 
     <div class="panel">
-      <h2>CrÃ©ditos</h2>
+      <h2>Créditos</h2>
       <p class="copas" id="p-creditos">0</p>
     </div>
   </section>
@@ -136,7 +136,7 @@ function mensaje(id, texto, ok) {
   el.classList.toggle("ok", Boolean(ok));
 }
 
-// ðŸ”§ DEPURACIÃ“N: muestra el cÃ³digo real del error junto al mensaje. Cuando salgas a producciÃ³n pon DEBUG = false.
+// 🔧 DEPURACIÓN: muestra el código real del error junto al mensaje. Cuando salgas a producción pon DEBUG = false.
 const DEBUG = true;
 function detalleError(e) {
   if (!DEBUG) return "";
@@ -146,15 +146,15 @@ function detalleError(e) {
 
 function errorAuth(e) {
   const mapa = {
-    "auth/email-already-in-use": "Ese correo ya tiene una cuenta. Entra con tu contraseÃ±a",
-    "auth/invalid-email": "El correo no es vÃ¡lido",
-    "auth/weak-password": "La contraseÃ±a debe tener mÃ­nimo 6 caracteres",
-    "auth/invalid-credential": "Correo o contraseÃ±a incorrectos",
-    "auth/wrong-password": "Correo o contraseÃ±a incorrectos",
-    "auth/user-not-found": "Correo o contraseÃ±a incorrectos",
+    "auth/email-already-in-use": "Ese correo ya tiene una cuenta. Entra con tu contraseña",
+    "auth/invalid-email": "El correo no es válido",
+    "auth/weak-password": "La contraseña debe tener mínimo 6 caracteres",
+    "auth/invalid-credential": "Correo o contraseña incorrectos",
+    "auth/wrong-password": "Correo o contraseña incorrectos",
+    "auth/user-not-found": "Correo o contraseña incorrectos",
     "auth/too-many-requests": "Demasiados intentos. Espera un momento y prueba de nuevo"
   };
-  return (mapa[e.code] || "No pudimos completar la acciÃ³n. Intenta de nuevo") + detalleError(e);
+  return (mapa[e.code] || "No pudimos completar la acción. Intenta de nuevo") + detalleError(e);
 }
 
 function cambiarModo(nuevo) {
@@ -174,7 +174,7 @@ $("form-auth").addEventListener("submit", async (ev) => {
   mensaje("msg-auth", "");
   const correo = $("correo").value.trim().toLowerCase();
   const clave = $("clave").value;
-  if (!correo || !clave) return mensaje("msg-auth", "Escribe tu correo y tu contraseÃ±a");
+  if (!correo || !clave) return mensaje("msg-auth", "Escribe tu correo y tu contraseña");
 
   $("btn-auth").disabled = true;
   try {
@@ -184,8 +184,8 @@ $("form-auth").addEventListener("submit", async (ev) => {
       const nombre = $("nombre").value.trim();
       const telefono = $("telefono").value.replace(/[\s-]/g, "");
       if (nombre.length < 2) return mensaje("msg-auth", "Escribe tu nombre");
-      if (!/^\+?[0-9]{7,15}$/.test(telefono)) return mensaje("msg-auth", "Escribe un telÃ©fono vÃ¡lido, solo nÃºmeros");
-      if (clave.length < 6) return mensaje("msg-auth", "La contraseÃ±a debe tener mÃ­nimo 6 caracteres");
+      if (!/^\+?[0-9]{7,15}$/.test(telefono)) return mensaje("msg-auth", "Escribe un teléfono válido, solo números");
+      if (clave.length < 6) return mensaje("msg-auth", "La contraseña debe tener mínimo 6 caracteres");
       const cred = await auth.createUserWithEmailAndPassword(correo, clave);
       await db.ref("users/" + cred.user.uid).set({
         nombre, correo, telefono,
@@ -222,7 +222,7 @@ async function cargarClash(tag) {
     $("c-nivel").textContent = d.nivel;
     $("c-record").textContent = d.victorias + " / " + d.derrotas;
     $("c-clan").textContent = d.clan || "Sin clan";
-    $("c-arena").textContent = d.arena || "â€“";
+    $("c-arena").textContent = d.arena || "–";
   } catch (e) {
     mensaje("msg-clash", e.message);
   }
@@ -246,7 +246,7 @@ $("form-tag").addEventListener("submit", async (ev) => {
 function pintarPerfil(p, user) {
   $("p-nombre").textContent = p.nombre || "Mi perfil";
   $("p-correo").textContent = p.correo || user.email;
-  $("p-telefono").textContent = p.telefono || "â€“";
+  $("p-telefono").textContent = p.telefono || "–";
   const hayTag = Boolean(p.tag);
   $("clash-vinculado").classList.toggle("oculto", !hayTag);
   $("form-tag").classList.toggle("oculto", hayTag);
