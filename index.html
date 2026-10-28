@@ -13,13 +13,9 @@
 body{margin:0;background:var(--fondo);color:var(--texto);font:16px/1.5 "Nunito",system-ui,sans-serif;padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom)}
 main{max-width:1100px;margin:0 auto;padding:28px 0 56px}
 .angosto{max-width:520px;margin:0 auto}
-.rejilla{display:grid;gap:16px}
-.rejilla .panel{margin:0}
 @media (min-width:760px){
   body{font-size:18px}
   h1{font-size:2.4rem}
-  .rejilla{grid-template-columns:1fr 1fr}
-  .rejilla .clash{grid-row:span 2}
 }
 h1,h2,.copas{font-family:"Lilita One","Nunito",system-ui,sans-serif;font-weight:400;letter-spacing:.01em}
 h1{font-size:2rem;line-height:1.15;margin:0 0 6px}
@@ -47,7 +43,6 @@ dt{color:var(--suave)}
 dd{margin:0;text-align:right;overflow-wrap:anywhere}
 .copas{font-size:3rem;line-height:1;color:var(--oro);margin:0}
 .etiqueta{color:var(--suave);margin:2px 0 16px}
-.rejilla .tabla-panel{grid-column:1/-1}
 table{width:100%;border-collapse:collapse}
 th,td{padding:10px 6px;text-align:left;border-bottom:1px solid var(--linea)}
 th{color:var(--suave);font-weight:700;font-size:.9em}
@@ -67,6 +62,27 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
 .historial .fecha{color:var(--suave);font-size:.85em;white-space:nowrap}
 .historial b{color:var(--oro);font-weight:700}
 .qr{display:inline-block;background:#fff;padding:12px;border-radius:10px;margin:0 0 16px;line-height:0}
+.topbar{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0 12px;margin-bottom:8px;background:var(--fondo)}
+.topbar h1{margin:0;font-size:1.6rem;overflow-wrap:anywhere}
+.menu-caja{position:relative;flex:none}
+.btn-menu{position:relative;z-index:3;width:48px;height:48px;display:grid;place-items:center;padding:0;border-radius:12px;background:var(--panel);border:2px solid var(--linea);color:var(--texto);cursor:pointer}
+.btn-menu svg{width:24px;height:24px}
+.btn-menu .l{transform-box:fill-box;transform-origin:center;transition:transform .2s,opacity .2s}
+.btn-menu[aria-expanded="true"] .l1{transform:translateY(6px) rotate(45deg)}
+.btn-menu[aria-expanded="true"] .l2{opacity:0}
+.btn-menu[aria-expanded="true"] .l3{transform:translateY(-6px) rotate(-45deg)}
+.menu-fondo{position:fixed;inset:0;z-index:1;background:rgba(0,0,0,.55);opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
+.menu{position:absolute;z-index:2;top:calc(100% + 8px);right:0;width:min(300px,calc(100vw - 32px));max-height:calc(100vh - 140px);overflow:auto;padding:8px;background:var(--panel);border:2px solid var(--linea);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.45);opacity:0;visibility:hidden;transform:translateY(-8px) scale(.98);transform-origin:top right;transition:opacity .18s,transform .18s,visibility .18s}
+.menu.abierto,.menu-fondo.abierto{opacity:1;visibility:visible}
+.menu.abierto{transform:none}
+.menu button{display:block;width:100%;text-align:left;padding:14px 16px;margin:0;border:0;border-radius:10px;background:none;color:var(--texto);font-weight:700;cursor:pointer}
+.menu button.actual{background:var(--fondo);color:var(--oro)}
+.menu button.salir{color:var(--error)}
+.menu hr{border:0;border-top:1px solid var(--linea);margin:6px 0}
+.seccion{display:none}
+.seccion.activa{display:block}
+.seccion>.panel{margin:0;min-height:calc(100vh - 110px);min-height:calc(100dvh - 110px)}
+@media (prefers-reduced-motion:reduce){.menu,.menu-fondo,.btn-menu .l{transition:none}}
 </style>
 </head>
 <body>
@@ -106,12 +122,30 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
   </section>
 
   <section id="vista-perfil" class="oculto">
-    <header class="barra">
+    <header class="topbar">
       <h1 id="p-nombre">Mi perfil</h1>
-      <button type="button" id="btn-salir" class="secundario">Salir</button>
+      <div class="menu-caja">
+        <button type="button" class="btn-menu" id="btn-menu" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+            <line class="l l1" x1="3" y1="6" x2="21" y2="6"/>
+            <line class="l l2" x1="3" y1="12" x2="21" y2="12"/>
+            <line class="l l3" x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <div class="menu-fondo" id="menu-fondo"></div>
+        <nav class="menu" id="menu" aria-label="Secciones">
+          <button type="button" data-sec="perfil">Mi perfil</button>
+          <button type="button" data-sec="clash">Clash Royale</button>
+          <button type="button" data-sec="tabla">Tabla de posiciones</button>
+          <button type="button" data-sec="historial">Historial</button>
+          <button type="button" data-sec="creditos">Créditos</button>
+          <hr>
+          <button type="button" id="btn-salir" class="salir">Cerrar sesión</button>
+        </nav>
+      </div>
     </header>
 
-    <div class="rejilla">
+    <div class="seccion activa" data-sec="perfil">
     <div class="panel">
       <h2>Mis datos</h2>
       <dl>
@@ -119,7 +153,9 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
         <dt>Teléfono</dt><dd id="p-telefono"></dd>
       </dl>
     </div>
+    </div>
 
+    <div class="seccion" data-sec="clash">
     <div class="panel clash">
       <h2>Clash Royale</h2>
       <div id="clash-vinculado" class="oculto">
@@ -151,13 +187,17 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
         <div id="mi-qr" class="qr"></div>
       </div>
     </div>
+    </div>
 
+    <div class="seccion" data-sec="creditos">
     <div class="panel">
       <h2>Créditos</h2>
       <p class="copas" id="p-creditos">0</p>
     </div>
+    </div>
 
-    <div class="panel tabla-panel">
+    <div class="seccion" data-sec="tabla">
+    <div class="panel">
       <h2>Tabla de posiciones</h2>
       <p class="suave">Las victorias solo cuentan entre jugadores que son amigos en Clash Royale.</p>
       <p id="msg-tabla" class="msg" role="status"></p>
@@ -166,8 +206,10 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
         <tbody id="tabla-cuerpo"></tbody>
       </table>
     </div>
+    </div>
 
-    <div class="panel tabla-panel">
+    <div class="seccion" data-sec="historial">
+    <div class="panel">
       <div class="barra">
         <h2>Historial</h2>
         <button type="button" id="btn-actualizar" class="secundario mini">Actualizar</button>
@@ -276,6 +318,42 @@ $("btn-google").onclick = async () => {
 };
 
 $("btn-salir").onclick = () => auth.signOut();
+
+// --- Menú hamburguesa y secciones ---
+const SECCIONES = ["perfil", "clash", "tabla", "historial", "creditos"];
+
+function abrirMenu(abrir) {
+  $("menu").classList.toggle("abierto", abrir);
+  $("menu-fondo").classList.toggle("abierto", abrir);
+  $("btn-menu").setAttribute("aria-expanded", String(abrir));
+  $("btn-menu").setAttribute("aria-label", abrir ? "Cerrar menú" : "Abrir menú");
+}
+
+function irA(sec) {
+  if (!SECCIONES.includes(sec)) sec = "perfil";
+  document.querySelectorAll(".seccion").forEach((el) => el.classList.toggle("activa", el.dataset.sec === sec));
+  document.querySelectorAll("#menu [data-sec]").forEach((b) => {
+    const actual = b.dataset.sec === sec;
+    b.classList.toggle("actual", actual);
+    if (actual) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+  });
+  abrirMenu(false);
+  window.scrollTo(0, 0);
+}
+
+$("btn-menu").onclick = () => abrirMenu(!$("menu").classList.contains("abierto"));
+$("menu-fondo").onclick = () => abrirMenu(false);
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") abrirMenu(false); });
+document.querySelectorAll("#menu [data-sec]").forEach((b) => {
+  b.onclick = () => {
+    // El hash permite que el botón "atrás" del celular vuelva a la sección anterior.
+    if (location.hash === "#" + b.dataset.sec) irA(b.dataset.sec); else location.hash = b.dataset.sec;
+  };
+});
+window.addEventListener("hashchange", () => {
+  if ($("vista-perfil").classList.contains("oculto")) return;
+  irA(location.hash.slice(1));
+});
 $("btn-cancelar").onclick = () => auth.signOut();
 
 // --- Registro de jugador nuevo ---
@@ -590,6 +668,7 @@ function entrarPerfil(user) {
   yaJugaron = new Set();
   jugadoresActual = [];
   mostrar("perfil");
+  irA(location.hash.slice(1));
   const refPerfil = db.ref("users/" + user.uid);
   const refCred = db.ref("wallets/" + user.uid + "/creditos");
   const refJug = db.ref("jugadores").orderByChild("creadoEn");
