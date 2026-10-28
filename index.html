@@ -317,6 +317,7 @@ async function cargarClash(tag) {
     const d = await traerClash(tag);
     $("c-copas").textContent = d.copas;
     $("c-nombre").textContent = d.nombre + " (" + d.tag + ")";
+    if (auth.currentUser) db.ref("jugadores/" + auth.currentUser.uid + "/nombreClash").set(d.nombre).catch((e) => console.error(e));
     $("c-mejor").textContent = d.mejoresCopas;
     $("c-nivel").textContent = d.nivel;
     $("c-record").textContent = d.victorias + " / " + d.derrotas;
@@ -353,9 +354,9 @@ function tagDeEnlace(url) {
   try {
     const u = new URL(url);
     if (u.protocol !== "https:" || u.hostname !== "link.clashroyale.com") return null;
-    if (!u.pathname.startsWith("/invite/friend")) return null;
-    const t = u.searchParams.get("tag");
-    return t ? "#" + t.toUpperCase() : null;
+    if (!/friend/i.test(url)) return null;
+    const m = url.match(/[?&]tag=([0289PYLQGRJCUV]{3,15})/i);
+    return m ? "#" + m[1].toUpperCase() : null;
   } catch (e) {
     return null;
   }
@@ -380,7 +381,7 @@ $("form-enlace").addEventListener("submit", async (ev) => {
 });
 
 function abrirAmigo(j) {
-  $("dlg-nombre").textContent = j.nombre || "Jugador";
+  $("dlg-nombre").textContent = j.nombreClash || j.nombre || "Jugador";
   $("dlg-enlace").href = j.enlace;
   const qr = $("qr");
   qr.innerHTML = "";
@@ -407,7 +408,7 @@ function pintarTabla(lista, miUid) {
     if (j.uid === miUid) tr.className = "yo";
     tr.appendChild(celda(i + 1, "num"));
 
-    const tdNombre = celda(j.nombre || "Jugador");
+    const tdNombre = celda(j.nombreClash || j.nombre || "Jugador");
     if (j.tag) {
       const s = document.createElement("small");
       s.textContent = j.tag;
