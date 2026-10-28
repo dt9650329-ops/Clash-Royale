@@ -478,12 +478,22 @@ $("btn-actualizar").onclick = () => actualizarTorneo(false);
 // Copia pública del perfil (sin correo ni teléfono) para que aparezca en la tabla.
 function sincronizarPublico(p, user) {
   if (!p.nombre) return;
+  // creadoEn NO va en esta actualización: las reglas solo dejan escribirlo la primera vez, y si viaja
+  // aquí Firebase rechaza TODA la actualización (nombre, tag y enlace incluidos) desde la segunda vez.
   const pub = { nombre: p.nombre, tag: p.tag || null, enlace: p.enlace || null };
-  if (p.creadoEn) pub.creadoEn = p.creadoEn;
-  const clave = JSON.stringify(pub);
+  const clave = JSON.stringify(pub) + "|" + (p.creadoEn || "");
   if (clave === ultimoSync) return;
   ultimoSync = clave;
-  db.ref("jugadores/" + user.uid).update(pub).catch((e) => console.error(e));
+  const ref = db.ref("jugadores/" + user.uid);
+  ref.update(pub)
+    .then(() => {
+      if (!p.creadoEn) return null;
+      return ref.child("creadoEn").once("value").then((s) => (s.exists() ? null : ref.child("creadoEn").set(p.creadoEn)));
+    })
+    .catch((e) => {
+      ultimoSync = "";
+      mensaje("msg-tabla", "No pudimos publicar tu perfil en la tabla" + detalleError(e));
+    });
 }
 
 // --- Perfil ---
