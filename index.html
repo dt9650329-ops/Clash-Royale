@@ -136,6 +136,14 @@ function mensaje(id, texto, ok) {
   el.classList.toggle("ok", Boolean(ok));
 }
 
+// 🔧 DEPURACIÓN: muestra el código real del error junto al mensaje. Cuando salgas a producción pon DEBUG = false.
+const DEBUG = true;
+function detalleError(e) {
+  if (!DEBUG) return "";
+  console.error(e);
+  return " [" + (e && (e.code || e.name) || "error") + ": " + String((e && e.message) || e).slice(0, 160) + "]";
+}
+
 function errorAuth(e) {
   const mapa = {
     "auth/email-already-in-use": "Ese correo ya tiene una cuenta. Entra con tu contraseña",
@@ -146,7 +154,7 @@ function errorAuth(e) {
     "auth/user-not-found": "Correo o contraseña incorrectos",
     "auth/too-many-requests": "Demasiados intentos. Espera un momento y prueba de nuevo"
   };
-  return mapa[e.code] || "No pudimos completar la acción. Intenta de nuevo";
+  return (mapa[e.code] || "No pudimos completar la acción. Intenta de nuevo") + detalleError(e);
 }
 
 function cambiarModo(nuevo) {
@@ -200,7 +208,7 @@ async function traerClash(tag) {
   } catch (e) {
     const propio = e.code && e.code.startsWith("functions/") &&
       !["functions/internal", "functions/unknown"].includes(e.code);
-    throw new Error(propio ? e.message : "No pudimos consultar Clash Royale. Intenta de nuevo");
+    throw new Error((propio ? e.message : "No pudimos consultar Clash Royale. Intenta de nuevo") + detalleError(e));
   }
 }
 
@@ -260,6 +268,6 @@ auth.onAuthStateChanged((user) => {
   const b = refCred.on("value", (s) => { $("p-creditos").textContent = s.val() || 0; });
   detener.push(() => refPerfil.off("value", a), () => refCred.off("value", b));
 });
-</script>  
+</script>
 </body>
 </html>
