@@ -250,7 +250,7 @@ input:focus{border-color:var(--cian)}
       <h2>Cuadrar partida</h2>
       <p class="suave">Tus créditos: <b id="pa-saldo">0</b></p>
       <form id="form-reto" novalidate>
-        <label>Monto a apostar<input id="pa-monto" type="number" inputmode="numeric" min="100" step="100" placeholder="500"></label>
+        <label>Monto a apostar<input id="pa-monto" type="number" inputmode="numeric" min="5" step="5" placeholder="10"></label>
         <div class="chips" id="pa-chips"></div>
         <div class="chips" id="pa-modo">
           <button type="button" class="chip activa" data-modo="ya">Jugar ya</button>
@@ -601,7 +601,7 @@ $("dlg-copiar").onclick = async () => {
 };
 
 // --- Cuadrar partida ---
-const MONTOS = [100, 500, 1000, 5000];
+const MONTOS = [5, 10, 20, 30];
 let saldo = 0, retos = [], modoReto = "ya", vistaPartidas = "programado";
 const fnReto = (nombre, datos) => functions.httpsCallable(nombre)(datos);
 const msgFn = (e) => (((e.code || "").startsWith("functions/") && !["functions/internal", "functions/unknown"].includes(e.code)) ? e.message : "No pudimos completar la acción. Intenta de nuevo") + detalleError(e);
