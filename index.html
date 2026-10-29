@@ -117,6 +117,25 @@ input:focus{border-color:var(--cian)}
 .paquete .pq-cant{font-weight:800;font-size:1.15em}
 .paquete .pq-precio{color:var(--oro);font-weight:700}
 .paquete button{width:auto;padding:10px 18px}
+.paquete .pq-nota{color:var(--suave);font-size:.85em}
+#dlg-retiro .copas{font-size:2.2rem;margin:4px 0}
+#dlg-retiro label{text-align:left}
+#dlg-retiro input{text-align:left;font-size:1em;margin-top:6px}
+/* ---- Guía: cómo se juega ---- */
+.guia details{border:2px solid var(--linea);border-radius:14px;background:rgba(5,11,32,.45);margin:0 0 10px;overflow:hidden}
+.guia summary{list-style:none;cursor:pointer;padding:14px 16px;font-weight:800;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.guia summary::-webkit-details-marker{display:none}
+.guia summary::after{content:"+";flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--panel);border:1px solid var(--linea);color:var(--oro);font-size:1.1rem;line-height:1}
+.guia details[open]>summary{color:var(--oro)}
+.guia details[open]>summary::after{content:"−"}
+.guia .cuerpo{padding:0 16px 14px}
+.guia .cuerpo p{margin:0 0 10px}
+.guia ol,.guia ul{margin:0 0 10px;padding-left:1.3em}
+.guia li{margin:0 0 6px}
+.guia .nota{color:var(--suave);font-size:.9em}
+.guia .ir{display:inline-block;margin:2px 0 0;padding:8px 14px;border-radius:999px;border:2px solid var(--linea);background:none;color:var(--texto);font-weight:700;cursor:pointer}
+.guia .ir:hover{border-color:var(--cian)}
+.guia .aviso{margin-top:14px;color:var(--suave);font-size:.85em}
 </style>
 </head>
 <body>
@@ -178,6 +197,7 @@ input:focus{border-color:var(--cian)}
           <button type="button" data-sec="tabla">Tabla de posiciones</button>
           <button type="button" data-sec="historial">Historial</button>
           <button type="button" data-sec="creditos">Créditos</button>
+          <button type="button" data-sec="guia">Cómo jugar</button>
           <hr>
           <button type="button" id="btn-salir" class="salir">Cerrar sesión</button>
         </nav>
@@ -234,14 +254,153 @@ input:focus{border-color:var(--cian)}
       <p class="copas" id="p-creditos">0</p>
       <h2 style="margin-top:20px">Tienda de monedas</h2>
       <div class="tienda" id="tienda">
-        <div class="paquete"><div><div class="pq-cant">10 créditos</div><div class="pq-precio">= $2 USD</div></div><button type="button" class="primario" data-paquete="p10">Comprar</button></div>
-        <div class="paquete"><div><div class="pq-cant">25 créditos</div><div class="pq-precio">= $5 USD</div></div><button type="button" class="primario" data-paquete="p25">Comprar</button></div>
-        <div class="paquete"><div><div class="pq-cant">50 créditos</div><div class="pq-precio">= $10 USD</div></div><button type="button" class="primario" data-paquete="p50">Comprar</button></div>
+        <div class="paquete"><div><div class="pq-cant">10 créditos</div><div class="pq-precio">= $8.000 COP</div></div><button type="button" class="primario" data-paquete="p10">Comprar</button></div>
+        <div class="paquete"><div><div class="pq-cant">25 créditos</div><div class="pq-precio">= $20.000 COP</div></div><button type="button" class="primario" data-paquete="p25">Comprar</button></div>
+        <div class="paquete"><div><div class="pq-cant">50 créditos</div><div class="pq-precio">= $40.000 COP</div></div><button type="button" class="primario" data-paquete="p50">Comprar</button></div>
       </div>
       <p id="msg-compra" class="msg" role="status"></p>
       <h2 style="margin-top:20px">Mis compras</h2>
       <ul id="pa-compras" class="historial"></ul>
       <p id="compras-vacio" class="suave">Aún no has solicitado créditos.</p>
+
+      <h2 style="margin-top:20px">Retirar créditos</h2>
+      <p class="suave">Retiras tus créditos al mismo valor, menos el 10% de comisión. Se descuentan al pedir el retiro; el administrador te envía el pago y lo marca como pagado. Si lo rechaza, te los devuelve.</p>
+      <div class="tienda" id="retiros">
+        <div class="paquete"><div><div class="pq-cant">10 créditos = $8.000 COP</div><div class="pq-precio">Recibes $7.200 COP</div><div class="pq-nota">Comisión 10%: $800 COP</div></div><button type="button" class="secundario" data-retiro="p10">Retirar</button></div>
+        <div class="paquete"><div><div class="pq-cant">25 créditos = $20.000 COP</div><div class="pq-precio">Recibes $18.000 COP</div><div class="pq-nota">Comisión 10%: $2.000 COP</div></div><button type="button" class="secundario" data-retiro="p25">Retirar</button></div>
+        <div class="paquete"><div><div class="pq-cant">50 créditos = $40.000 COP</div><div class="pq-precio">Recibes $36.000 COP</div><div class="pq-nota">Comisión 10%: $4.000 COP</div></div><button type="button" class="secundario" data-retiro="p50">Retirar</button></div>
+      </div>
+      <p id="msg-retiro" class="msg" role="status"></p>
+      <h2 style="margin-top:20px">Mis retiros</h2>
+      <ul id="pa-retiros" class="historial"></ul>
+      <p id="retiros-vacio" class="suave">Aún no has pedido retiros.</p>
+    </div>
+    </div>
+
+    <div class="seccion" data-sec="guia">
+    <div class="panel guia">
+      <h2>Cómo jugar</h2>
+      <p class="suave">Todo lo que necesitas saber, de principio a fin. Toca cada título para abrirlo.</p>
+
+      <details open>
+        <summary>1. Crea tu perfil</summary>
+        <div class="cuerpo">
+          <ol>
+            <li>Entra con tu cuenta de Google y completa tu nombre y tu teléfono.</li>
+            <li>En <b>Clash Royale</b> escribe tu tag de Supercell (está en tu perfil del juego y empieza con #) y toca <b>Vincular tag</b>.</li>
+            <li>Pega tu enlace de amigo y toca <b>Guardar enlace</b>. En el juego: Social → Añadir amigos → Enviar enlace. Así aparece tu QR para que otros te agreguen.</li>
+          </ol>
+          <button type="button" class="ir" data-ir="clash">Ir a Clash Royale</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>2. Agrégate con tus rivales</summary>
+        <div class="cuerpo">
+          <p>Para jugar una amistosa tienen que ser amigos en Clash Royale.</p>
+          <ol>
+            <li>Entra a <b>Tabla de posiciones</b> y toca <b>Añadir</b> junto al jugador.</li>
+            <li>Escanea el QR desde Clash Royale (Social → Añadir amigos → Escanear) o abre el enlace.</li>
+            <li>Si ya eran amigos, o los agregaste por otro lado, toca <b>Ya nos añadimos ✓</b>.</li>
+          </ol>
+          <p class="nota">La marca «Ya son amigos» la pone esta página cuando abres el enlace o tocas ese botón. No la confirma Supercell.</p>
+          <button type="button" class="ir" data-ir="tabla">Ir a la tabla</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>3. Consigue créditos</summary>
+        <div class="cuerpo">
+          <p>Los créditos son lo que se apuesta en cada partida. Los consigues en la tienda de monedas:</p>
+          <ul>
+            <li>10 créditos = $8.000 COP</li>
+            <li>25 créditos = $20.000 COP</li>
+            <li>50 créditos = $40.000 COP</li>
+          </ul>
+          <ol>
+            <li>En <b>Créditos</b> toca <b>Comprar</b> en el paquete que quieras y confirma la solicitud.</li>
+            <li>El administrador confirma tu pago y te acredita los créditos.</li>
+            <li>Puedes ver el estado en <b>Mis compras</b>: pendiente, aprobada o rechazada. Cuando se aprueba, tu saldo sube solo.</li>
+          </ol>
+          <p><b>Retirar:</b> en <b>Créditos</b>, dentro de «Retirar créditos», elige 10, 25 o 50 créditos, escribe dónde quieres recibir el pago y confirma. Tus créditos se descuentan al pedirlo y el administrador te envía el pago. Si lo rechaza, te los devuelve. Puedes ver el estado en <b>Mis retiros</b>.</p>
+          <p><b>Comisiones:</b> se cobra el 10% en cada consignación (cuando compras créditos) y el 10% en cada retiro. Por ejemplo, si retiras 25 créditos ($20.000 COP) recibes $18.000 COP. En las partidas no se cobra comisión: lo que ganas es tuyo.</p>
+          <button type="button" class="ir" data-ir="creditos">Ir a Créditos</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>4. Cuadra una partida</summary>
+        <div class="cuerpo">
+          <p>En <b>Cuadrar partida</b> eliges cuántos créditos apuestas (desde 5, de 5 en 5) y cómo quieres jugar:</p>
+          <ul>
+            <li><b>Jugar ya:</b> tu reto queda abierto como máximo 5 minutos esperando rival. Si nadie lo acepta, se te devuelven los créditos.</li>
+            <li><b>Programar:</b> eliges fecha y hora, desde 2 minutos hasta 7 días después.</li>
+            <li><b>Al azar:</b> la página busca un rival entre los retos abiertos que puedes pagar.</li>
+          </ul>
+          <p>También puedes aceptar el reto de otro jugador desde <b>Partidas disponibles</b> con el botón <b>Aceptar</b>.</p>
+          <p>Tus créditos se reservan en cuanto publicas o aceptas. Si nadie acepta tu reto o lo cancelas antes de que lo acepten, se te devuelven. Puedes tener hasta 3 retos abiertos a la vez, y no puedes aceptar el tuyo.</p>
+          <button type="button" class="ir" data-ir="partida">Ir a Cuadrar partida</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>5. Formas de juego</summary>
+        <div class="cuerpo">
+          <p>Van a habilitarse varias formas de juego. Para jugar cualquiera de ellas solo hace falta una cosa: que los dos jugadores estén de acuerdo.</p>
+          <p class="nota">Por ahora la página lee sola el resultado de las batallas amistosas 1 contra 1.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>6. Juega la partida</summary>
+        <div class="cuerpo">
+          <p>Cuando alguien acepta, la partida aparece en <b>Mis partidas</b> como «Aceptada». Si todavía no son amigos, toca <b>Ver enlace</b> para agregarlo.</p>
+          <ol>
+            <li>Abran Clash Royale y jueguen <b>una batalla amistosa 1 contra 1</b> entre los dos (Social → tu amigo → Batalla amistosa).</li>
+            <li>Solo cuenta una amistosa entre ustedes dos, jugada después de aceptar la partida. Si era programada, desde 10 minutos antes de la hora acordada.</li>
+            <li>Tienen 1 hora para jugarla, contada desde que se acepta o desde la hora programada.</li>
+          </ol>
+          <p class="nota">Por ahora solo se lee automáticamente la amistosa 1 contra 1. Ladder, 2 contra 2 y guerras de clanes no cuentan.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>7. Resultado y pago</summary>
+        <div class="cuerpo">
+          <ul>
+            <li>La página lee sola el resultado en Clash Royale, mientras tengas una partida aceptada. No tienes que tocar nada.</li>
+            <li>Gana quien haga más coronas y se lleva el pozo completo: los dos montos. Los créditos ganados son para el ganador.</li>
+            <li>Si empatan, o si no juegan dentro de la hora, se devuelven los créditos a los dos.</li>
+            <li>Verás «¡Ganaste!» o «Perdiste» en <b>Mis partidas</b>, y tu saldo actualizado en <b>Créditos</b>.</li>
+            <li>Cada batalla cuenta una sola vez.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary>8. Tabla de posiciones e historial</summary>
+        <div class="cuerpo">
+          <ul>
+            <li>La <b>tabla</b> ordena a los jugadores por victorias en amistosas entre jugadores de esta página. Con igual número de victorias va primero quien se registró antes.</li>
+            <li>El <b>historial</b> muestra las últimas batallas registradas. Toca <b>Actualizar</b> para revisar si hay nuevas.</li>
+          </ul>
+          <button type="button" class="ir" data-ir="historial">Ir al historial</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>9. Reglas y consejos</summary>
+        <div class="cuerpo">
+          <ul>
+            <li>Juega siempre con el tag que vinculaste. Si es otro, la página no reconoce la partida.</li>
+            <li>Una partida ya aceptada no se puede cancelar.</li>
+            <li>Apuesta solo créditos que estés dispuesto a perder.</li>
+            <li>Si algo no cuadra con un pago o una partida, escríbele al administrador.</li>
+          </ul>
+        </div>
+      </details>
+
+      <p class="aviso">Esta página es independiente y no está afiliada a Supercell. Clash Royale es una marca de Supercell.</p>
     </div>
     </div>
 
@@ -309,6 +468,21 @@ input:focus{border-color:var(--cian)}
   </section>
 
 </main>
+
+<dialog id="dlg-retiro">
+  <h2>Retirar créditos</h2>
+  <p class="copas" id="dr-cant">0</p>
+  <p class="etiqueta" id="dr-recibes"></p>
+  <form id="form-retiro" novalidate>
+    <label>¿Dónde quieres recibir el pago?
+      <input id="dr-destino" maxlength="120" placeholder="Ej: Nequi 3001234567" autocomplete="off">
+    </label>
+    <p class="suave" style="font-size:.85em;margin-bottom:10px">Escribe el medio y los datos exactos. Tus créditos se descuentan ahora y se devuelven si el administrador rechaza el retiro.</p>
+    <p id="msg-dretiro" class="msg" role="status"></p>
+    <button type="submit" class="primario" id="dr-ok">Confirmar retiro</button>
+    <button type="button" class="secundario cancelar" id="dr-no">Cancelar</button>
+  </form>
+</dialog>
 
 <dialog id="dlg-amigo">
   <h2 id="dlg-nombre"></h2>
@@ -407,7 +581,7 @@ $("btn-google").onclick = async () => {
 $("btn-salir").onclick = () => auth.signOut();
 
 // --- Menú hamburguesa y secciones ---
-const SECCIONES = ["perfil", "clash", "partida", "tabla", "historial", "creditos"];
+const SECCIONES = ["perfil", "clash", "partida", "tabla", "historial", "creditos", "guia"];
 
 function abrirMenu(abrir) {
   $("menu").classList.toggle("abierto", abrir);
@@ -427,7 +601,7 @@ function irA(sec) {
   abrirMenu(false);
   window.scrollTo(0, 0);
   if (sec === "partida") fnReto("expirarRetos").catch(() => {});
-  if (sec === "creditos") cargarCompras();
+  if (sec === "creditos") { cargarCompras(); cargarRetiros(); }
 }
 
 $("btn-menu").onclick = () => abrirMenu(!$("menu").classList.contains("abierto"));
@@ -438,6 +612,9 @@ document.querySelectorAll("#menu [data-sec]").forEach((b) => {
     // El hash permite que el botón "atrás" del celular vuelva a la sección anterior.
     if (location.hash === "#" + b.dataset.sec) irA(b.dataset.sec); else location.hash = b.dataset.sec;
   };
+});
+document.querySelectorAll("#vista-perfil [data-ir]").forEach((b) => {
+  b.onclick = () => { if (location.hash === "#" + b.dataset.ir) irA(b.dataset.ir); else location.hash = b.dataset.ir; };
 });
 window.addEventListener("hashchange", () => {
   if ($("vista-perfil").classList.contains("oculto")) return;
@@ -741,8 +918,63 @@ function revisarLiquidacion() {
 }
 setInterval(revisarLiquidacion, 20000);
 
+// Retiros: mismos 3 valores de la tienda, menos 10% de comisión. El servidor calcula todo; esto solo lo muestra.
+const COMISION_RETIRO = 10;
+const ESTADO_RETIRO = { pendiente: "Pendiente de pago", devolviendo: "Devolviendo créditos…", pagado: "Pagado ✓", rechazado: "Rechazado · créditos devueltos" };
+let retiroElegido = null, retirosCargando = false;
+const usd2 = (n) => "$" + Number(n).toFixed(2) + " USD";   // solo para retiros viejos que se pidieron en dólares
+const cop = (n) => "$" + Math.round(Number(n)).toLocaleString("es-CO") + " COP";
+
+async function cargarRetiros() {
+  if (retirosCargando || !auth.currentUser) return;
+  retirosCargando = true;
+  try {
+    const lista = (await fnReto("misRetiros")).data || [];
+    const ul = $("pa-retiros"); ul.innerHTML = "";
+    lista.forEach((c) => ul.appendChild(fila(c.creditos + " créditos", ESTADO_RETIRO[c.estado] || c.estado, "Recibes " + (c.recibePesos != null ? cop(c.recibePesos) : usd2(c.recibeUsd)), "", false, null)));
+    $("retiros-vacio").classList.toggle("oculto", lista.length > 0);
+  } catch (e) { console.warn("misRetiros", e); }
+  retirosCargando = false;
+}
+
+document.querySelectorAll("#retiros [data-retiro]").forEach((b) => {
+  b.onclick = () => {
+    const p = PAQUETES[b.dataset.retiro];
+    if (!p) return;
+    mensaje("msg-retiro", "");
+    if (saldo < p.creditos) return mensaje("msg-retiro", "Necesitas " + p.creditos + " créditos para este retiro y tienes " + saldo.toLocaleString("es-CO"));
+    retiroElegido = b.dataset.retiro;
+    const comision = Math.round(p.pesos * COMISION_RETIRO / 100);
+    $("dr-cant").textContent = p.creditos + " créditos";
+    $("dr-recibes").textContent = "Recibes " + cop(p.pesos - comision) + " (comisión " + COMISION_RETIRO + "%: " + cop(comision) + ")";
+    $("dr-destino").value = "";
+    mensaje("msg-dretiro", "");
+    $("dr-ok").disabled = false;
+    $("dlg-retiro").showModal();
+  };
+});
+$("dr-no").onclick = () => $("dlg-retiro").close();
+$("form-retiro").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  mensaje("msg-dretiro", "");
+  const destino = $("dr-destino").value.replace(/\s+/g, " ").trim();
+  if (destino.length < 5) return mensaje("msg-dretiro", "Escribe dónde quieres recibir el pago (medio y datos)");
+  $("dr-ok").disabled = true;
+  try {
+    await fnReto("solicitarRetiro", { paquete: retiroElegido, destino });
+    $("dlg-retiro").close();
+    mensaje("msg-retiro", "Retiro solicitado. El administrador te enviará el pago y lo verás aquí como pagado", true);
+    cargarRetiros();
+  } catch (e) {
+    mensaje("msg-dretiro", msgFn(e));
+  } finally {
+    $("dr-ok").disabled = false;
+  }
+});
+
 // Tienda de monedas: el jugador solicita un paquete y el administrador confirma el pago y lo acredita.
-const PAQUETES = { p10: { creditos: 10, usd: 2 }, p25: { creditos: 25, usd: 5 }, p50: { creditos: 50, usd: 10 } };
+// Precios en pesos colombianos (COP). Deben ser los mismos que el PAQUETES del servidor (functions/index.js).
+const PAQUETES = { p10: { creditos: 10, pesos: 8000 }, p25: { creditos: 25, pesos: 20000 }, p50: { creditos: 50, pesos: 40000 } };
 const ESTADO_COMPRA = { pendiente: "Pendiente de confirmación", procesando: "Acreditando…", aprobada: "Aprobada ✓", rechazada: "Rechazada" };
 let comprasCargando = false;
 async function cargarCompras() {
@@ -751,7 +983,7 @@ async function cargarCompras() {
   try {
     const lista = (await fnReto("misCompras")).data || [];
     const ul = $("pa-compras"); ul.innerHTML = "";
-    lista.forEach((c) => ul.appendChild(fila(c.creditos + " créditos", ESTADO_COMPRA[c.estado] || c.estado, "$" + c.usd + " USD", "", false, null)));
+    lista.forEach((c) => ul.appendChild(fila(c.creditos + " créditos", ESTADO_COMPRA[c.estado] || c.estado, (c.pesos != null ? cop(c.pesos) : "$" + c.usd + " USD"), "", false, null)));
     $("compras-vacio").classList.toggle("oculto", lista.length > 0);
   } catch (e) { console.warn("misCompras", e); }
   comprasCargando = false;
@@ -759,7 +991,7 @@ async function cargarCompras() {
 document.querySelectorAll("#tienda [data-paquete]").forEach((b) => {
   b.onclick = async () => {
     const p = PAQUETES[b.dataset.paquete];
-    if (!p || !confirm("¿Solicitar " + p.creditos + " créditos por $" + p.usd + " USD?\n\nEl administrador confirmará tu pago y te acreditará los créditos.")) return;
+    if (!p || !confirm("¿Solicitar " + p.creditos + " créditos por " + cop(p.pesos) + "?\n\nEl administrador confirmará tu pago y te acreditará los créditos.")) return;
     b.disabled = true; mensaje("msg-compra", "");
     try {
       await fnReto("solicitarCompra", { paquete: b.dataset.paquete });
@@ -934,7 +1166,7 @@ function entrarPerfil(user) {
   const refCred = db.ref("wallets/" + user.uid + "/creditos");
   const refJug = db.ref("jugadores").orderByChild("creadoEn");
   const a = refPerfil.on("value", (s) => pintarPerfil(s.val() || {}, user));
-  const b = refCred.on("value", (s) => { saldo = s.val() || 0; $("p-creditos").textContent = saldo.toLocaleString("es-CO"); $("pa-saldo").textContent = saldo.toLocaleString("es-CO"); pintarPartidas(); cargarCompras(); });
+  const b = refCred.on("value", (s) => { saldo = s.val() || 0; $("p-creditos").textContent = saldo.toLocaleString("es-CO"); $("pa-saldo").textContent = saldo.toLocaleString("es-CO"); pintarPartidas(); cargarCompras(); cargarRetiros(); });
   fnReto("creditosPrueba").catch(() => {});   // 🧪 modo pruebas: la cuenta recibe 1.000.000 de créditos (una vez)
   const refRetos = db.ref("retos").orderByChild("creadoEn").limitToLast(100);
   const f = refRetos.on("value", (s) => {
