@@ -112,6 +112,11 @@ h1,h2{text-shadow:0 2px 16px rgba(41,221,251,.22)}
 .primario{box-shadow:0 4px 18px rgba(253,181,43,.28)}
 .chip.activa{box-shadow:0 0 14px rgba(253,181,43,.3)}
 input:focus{border-color:var(--cian)}
+.tienda{display:grid;gap:12px;margin:12px 0 4px}
+.paquete{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-radius:14px;border:2px solid var(--linea);background:var(--panel)}
+.paquete .pq-cant{font-weight:800;font-size:1.15em}
+.paquete .pq-precio{color:var(--oro);font-weight:700}
+.paquete button{width:auto;padding:10px 18px}
 </style>
 </head>
 <body>
@@ -227,6 +232,16 @@ input:focus{border-color:var(--cian)}
     <div class="panel">
       <h2>Créditos</h2>
       <p class="copas" id="p-creditos">0</p>
+      <h2 style="margin-top:20px">Tienda de monedas</h2>
+      <div class="tienda" id="tienda">
+        <div class="paquete"><div><div class="pq-cant">10 créditos</div><div class="pq-precio">= $2 USD</div></div><button type="button" class="primario" data-paquete="p10">Comprar</button></div>
+        <div class="paquete"><div><div class="pq-cant">25 créditos</div><div class="pq-precio">= $5 USD</div></div><button type="button" class="primario" data-paquete="p25">Comprar</button></div>
+        <div class="paquete"><div><div class="pq-cant">50 créditos</div><div class="pq-precio">= $10 USD</div></div><button type="button" class="primario" data-paquete="p50">Comprar</button></div>
+      </div>
+      <p id="msg-compra" class="msg" role="status"></p>
+      <h2 style="margin-top:20px">Mis compras</h2>
+      <ul id="pa-compras" class="historial"></ul>
+      <p id="compras-vacio" class="suave">Aún no has solicitado créditos.</p>
     </div>
     </div>
 
@@ -245,10 +260,23 @@ input:focus{border-color:var(--cian)}
         <p id="msg-reto" class="msg" role="status"></p>
         <button class="primario" id="btn-reto">Publicar reto</button>
       </form>
-      <h2 style="margin-top:24px">Retos abiertos</h2>
-      <input id="pa-buscar" placeholder="Buscar por nombre o tag" autocomplete="off">
-      <ul id="pa-abiertos" class="historial"></ul>
-      <p id="pa-abiertos-vacio" class="suave">No hay retos abiertos por ahora.</p>
+      <h2 style="margin-top:24px">Partidas disponibles</h2>
+      <div class="chips" id="pa-vista">
+        <button type="button" class="chip activa" data-vista="programado">Programadas</button>
+        <button type="button" class="chip" data-vista="ya">Jugar ya</button>
+        <button type="button" class="chip" data-vista="azar">Al azar</button>
+      </div>
+      <div id="pa-bloque-lista">
+        <input id="pa-buscar" placeholder="Buscar por nombre o tag" autocomplete="off">
+        <ul id="pa-abiertos" class="historial"></ul>
+        <p id="pa-abiertos-vacio" class="suave">No hay partidas programadas por ahora.</p>
+      </div>
+      <div id="pa-bloque-azar" class="oculto">
+        <p class="suave">Busca un rival al azar entre los retos abiertos que puedes pagar. Si escribes un monto arriba, solo busca retos de ese monto.</p>
+        <button type="button" class="primario" id="btn-azar">Buscar partida al azar</button>
+        <ul id="pa-azar" class="historial"></ul>
+        <p id="msg-azar" class="msg" role="status"></p>
+      </div>
       <h2 style="margin-top:24px">Mis partidas</h2>
       <ul id="pa-mios" class="historial"></ul>
       <p id="msg-partidas" class="msg" role="status"></p>
@@ -399,6 +427,7 @@ function irA(sec) {
   abrirMenu(false);
   window.scrollTo(0, 0);
   if (sec === "partida") fnReto("expirarRetos").catch(() => {});
+  if (sec === "creditos") cargarCompras();
 }
 
 $("btn-menu").onclick = () => abrirMenu(!$("menu").classList.contains("abierto"));
@@ -573,7 +602,7 @@ $("dlg-copiar").onclick = async () => {
 
 // --- Cuadrar partida ---
 const MONTOS = [100, 500, 1000, 5000];
-let saldo = 0, retos = [], modoReto = "ya";
+let saldo = 0, retos = [], modoReto = "ya", vistaPartidas = "programado";
 const fnReto = (nombre, datos) => functions.httpsCallable(nombre)(datos);
 const msgFn = (e) => (((e.code || "").startsWith("functions/") && !["functions/internal", "functions/unknown"].includes(e.code)) ? e.message : "No pudimos completar la acción. Intenta de nuevo") + detalleError(e);
 const cuandoTxt = (r) => r.modo === "programado" ? new Date(r.cuando).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) : "Ya";
@@ -643,14 +672,26 @@ function pintarPartidas() {
   retos.slice().sort((a, b) => b.creadoEn - a.creadoEn).forEach((r) => {
     const vigente = r.estado === "abierto" && r.vence > ahora;
     if (vigente && r.creadorUid !== uid) {
+      if (vistaPartidas !== "azar" && r.modo !== vistaPartidas) return;
       if (q && !(r.creadorNombre + " " + r.creadorTag).toLowerCase().includes(q)) return;
       ab.appendChild(fila(r.creadorNombre, r.creadorTag, r.monto + " · " + cuandoTxt(r), "Aceptar", r.monto > saldo, () => accionReto("aceptarReto", r.id)));
     } else if (r.creadorUid === uid || r.rivalUid === uid) {
       const soyCreador = r.creadorUid === uid;
+      const reciente = ahora - (r.terminadoEn || r.creadoEn) < 48 * 3600 * 1000;
       const otro = soyCreador ? { uid: r.rivalUid, nombre: r.rivalNombre, tag: r.rivalTag } : { uid: r.creadorUid, nombre: r.creadorNombre, tag: r.creadorTag };
       if (r.estado === "aceptado") {
         const j = jugadoresActual.find((x) => x.uid === otro.uid);
-        mi.appendChild(fila("vs " + otro.nombre, otro.tag + " · Aceptada", r.monto + " · " + cuandoTxt(r), j && j.enlace ? "Ver enlace" : "", false, () => abrirAmigo(j)));
+        mi.appendChild(fila("vs " + otro.nombre, otro.tag + " · Aceptada: jueguen una amistosa 1v1", r.monto + " · " + cuandoTxt(r), j && j.enlace ? "Ver enlace" : "", false, () => abrirAmigo(j)));
+      } else if (r.estado === "liquidando") {
+        mi.appendChild(fila("vs " + otro.nombre, "Calculando el resultado…", r.monto + " · " + cuandoTxt(r), "", false, null));
+      } else if (r.estado === "finalizado" && reciente) {
+        const gane = !!r.resultado && r.resultado.ganadorUid === uid;
+        const co = r.resultado ? r.resultado.coronasGanador + "-" + r.resultado.coronasPerdedor : "";
+        mi.appendChild(fila(gane ? "¡Ganaste!" : "Perdiste", "vs " + otro.nombre + (co ? " · coronas " + (gane ? co : co.split("-").reverse().join("-")) : ""), gane ? "+" + (r.premio || r.monto * 2) : "−" + r.monto, "", false, null));
+      } else if (r.estado === "empate" && reciente) {
+        mi.appendChild(fila("Empate", "vs " + otro.nombre + " · Créditos devueltos", String(r.monto), "", false, null));
+      } else if (r.estado === "sin_jugar" && reciente) {
+        mi.appendChild(fila("No se jugó", "vs " + otro.nombre + " · Créditos devueltos", String(r.monto), "", false, null));
       } else if (vigente) {
         mi.appendChild(fila("Esperando rival", r.monto + " · " + cuandoTxt(r), "", "Cancelar", false, () => accionReto("cancelarReto", r.id)));
       } else if (ahora - r.creadoEn < 24 * 3600 * 1000) {
@@ -658,8 +699,76 @@ function pintarPartidas() {
       }
     }
   });
+  $("pa-abiertos-vacio").textContent = vistaPartidas === "ya" ? "No hay retos para jugar ya por ahora." : "No hay partidas programadas por ahora.";
   $("pa-abiertos-vacio").classList.toggle("oculto", ab.children.length > 0);
 }
+
+// Pestañas: Programadas / Jugar ya / Al azar
+document.querySelectorAll("#pa-vista [data-vista]").forEach((b) => {
+  b.onclick = () => {
+    vistaPartidas = b.dataset.vista;
+    document.querySelectorAll("#pa-vista .chip").forEach((x) => x.classList.toggle("activa", x === b));
+    $("pa-bloque-lista").classList.toggle("oculto", vistaPartidas === "azar");
+    $("pa-bloque-azar").classList.toggle("oculto", vistaPartidas !== "azar");
+    pintarPartidas();
+  };
+});
+
+// Buscar partida al azar: elige un reto abierto (que no sea mío y que pueda pagar) y deja aceptarlo. Prefiere los de «Jugar ya».
+$("btn-azar").onclick = () => {
+  mensaje("msg-azar", "");
+  const lista = $("pa-azar"); lista.innerHTML = "";
+  if (!auth.currentUser) return;
+  const uid = auth.currentUser.uid, ahora = Date.now(), monto = Number($("pa-monto").value) || 0;
+  const cand = retos.filter((r) => r.estado === "abierto" && r.vence > ahora && r.creadorUid !== uid && r.monto <= saldo && (!monto || r.monto === monto));
+  if (!cand.length) return mensaje("msg-azar", monto ? "No hay retos de " + monto + " ahora. Prueba otro monto o publica el tuyo" : "No hay retos que puedas pagar ahora. Publica el tuyo y espera rival");
+  const ya = cand.filter((r) => r.modo === "ya");
+  const pool = ya.length ? ya : cand;
+  const r = pool[Math.floor(Math.random() * pool.length)];
+  lista.appendChild(fila(r.creadorNombre, r.creadorTag, r.monto + " · " + cuandoTxt(r), "Aceptar", false, () => { lista.innerHTML = ""; accionReto("aceptarReto", r.id); }));
+  mensaje("msg-azar", "Encontré un rival. Toca «Aceptar» para jugar, o busca otra vez", true);
+};
+
+// Resultado de las partidas: mientras haya una aceptada, se pide al servidor que revise Clash Royale (cada ~20 s) y pague al ganador.
+let liqUltimo = 0;
+function revisarLiquidacion() {
+  if (!auth.currentUser) return;
+  const uid = auth.currentUser.uid;
+  const hay = retos.some((r) => (r.estado === "aceptado" || r.estado === "liquidando") && (r.creadorUid === uid || r.rivalUid === uid));
+  if (!hay || Date.now() - liqUltimo < 20000) return;
+  liqUltimo = Date.now();
+  fnReto("liquidarRetos").catch((e) => console.warn("liquidarRetos", e));
+}
+setInterval(revisarLiquidacion, 20000);
+
+// Tienda de monedas: el jugador solicita un paquete y el administrador confirma el pago y lo acredita.
+const PAQUETES = { p10: { creditos: 10, usd: 2 }, p25: { creditos: 25, usd: 5 }, p50: { creditos: 50, usd: 10 } };
+const ESTADO_COMPRA = { pendiente: "Pendiente de confirmación", procesando: "Acreditando…", aprobada: "Aprobada ✓", rechazada: "Rechazada" };
+let comprasCargando = false;
+async function cargarCompras() {
+  if (comprasCargando || !auth.currentUser) return;
+  comprasCargando = true;
+  try {
+    const lista = (await fnReto("misCompras")).data || [];
+    const ul = $("pa-compras"); ul.innerHTML = "";
+    lista.forEach((c) => ul.appendChild(fila(c.creditos + " créditos", ESTADO_COMPRA[c.estado] || c.estado, "$" + c.usd + " USD", "", false, null)));
+    $("compras-vacio").classList.toggle("oculto", lista.length > 0);
+  } catch (e) { console.warn("misCompras", e); }
+  comprasCargando = false;
+}
+document.querySelectorAll("#tienda [data-paquete]").forEach((b) => {
+  b.onclick = async () => {
+    const p = PAQUETES[b.dataset.paquete];
+    if (!p || !confirm("¿Solicitar " + p.creditos + " créditos por $" + p.usd + " USD?\n\nEl administrador confirmará tu pago y te acreditará los créditos.")) return;
+    b.disabled = true; mensaje("msg-compra", "");
+    try {
+      await fnReto("solicitarCompra", { paquete: b.dataset.paquete });
+      mensaje("msg-compra", "Solicitud enviada. El administrador confirmará tu pago y verás tus créditos aquí", true);
+      cargarCompras();
+    } catch (e) { mensaje("msg-compra", msgFn(e) + detalleError(e)); }
+    b.disabled = false;
+  };
+});
 $("pa-buscar").oninput = pintarPartidas;
 
 // --- Tabla de posiciones ---
@@ -825,12 +934,14 @@ function entrarPerfil(user) {
   const refCred = db.ref("wallets/" + user.uid + "/creditos");
   const refJug = db.ref("jugadores").orderByChild("creadoEn");
   const a = refPerfil.on("value", (s) => pintarPerfil(s.val() || {}, user));
-  const b = refCred.on("value", (s) => { saldo = s.val() || 0; $("p-creditos").textContent = saldo; $("pa-saldo").textContent = saldo; pintarPartidas(); });
+  const b = refCred.on("value", (s) => { saldo = s.val() || 0; $("p-creditos").textContent = saldo.toLocaleString("es-CO"); $("pa-saldo").textContent = saldo.toLocaleString("es-CO"); pintarPartidas(); cargarCompras(); });
+  fnReto("creditosPrueba").catch(() => {});   // 🧪 modo pruebas: la cuenta recibe 1.000.000 de créditos (una vez)
   const refRetos = db.ref("retos").orderByChild("creadoEn").limitToLast(100);
   const f = refRetos.on("value", (s) => {
     retos = [];
     s.forEach((h) => { retos.push(Object.assign({ id: h.key }, h.val())); });
     pintarPartidas();
+    revisarLiquidacion();
   }, (e) => mensaje("msg-partidas", "No pudimos cargar los retos. Revisa las reglas de la base de datos" + detalleError(e)));
   const c = refJug.on("value", (s) => {
     const lista = [];
