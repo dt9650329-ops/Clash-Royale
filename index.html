@@ -254,9 +254,9 @@ input:focus{border-color:var(--cian)}
       <p class="copas" id="p-creditos">0</p>
       <h2 style="margin-top:20px">Tienda de monedas</h2>
       <div class="tienda" id="tienda">
-        <div class="paquete"><div><div class="pq-cant">10 créditos</div><div class="pq-precio">= $8.000 COP</div></div><button type="button" class="primario" data-paquete="p10">Comprar</button></div>
-        <div class="paquete"><div><div class="pq-cant">25 créditos</div><div class="pq-precio">= $20.000 COP</div></div><button type="button" class="primario" data-paquete="p25">Comprar</button></div>
-        <div class="paquete"><div><div class="pq-cant">50 créditos</div><div class="pq-precio">= $40.000 COP</div></div><button type="button" class="primario" data-paquete="p50">Comprar</button></div>
+        <div class="paquete"><div><div class="pq-cant">10 créditos</div><div class="pq-precio">= $5.000 COP</div></div><button type="button" class="primario" data-paquete="p10">Comprar</button></div>
+        <div class="paquete"><div><div class="pq-cant">25 créditos</div><div class="pq-precio">= $12.500 COP</div></div><button type="button" class="primario" data-paquete="p25">Comprar</button></div>
+        <div class="paquete"><div><div class="pq-cant">50 créditos</div><div class="pq-precio">= $25.000 COP</div></div><button type="button" class="primario" data-paquete="p50">Comprar</button></div>
       </div>
       <p id="msg-compra" class="msg" role="status"></p>
       <h2 style="margin-top:20px">Mis compras</h2>
@@ -264,11 +264,11 @@ input:focus{border-color:var(--cian)}
       <p id="compras-vacio" class="suave">Aún no has solicitado créditos.</p>
 
       <h2 style="margin-top:20px">Retirar créditos</h2>
-      <p class="suave">Retiras tus créditos al mismo valor, menos el 10% de comisión. Se descuentan al pedir el retiro; el administrador te envía el pago y lo marca como pagado. Si lo rechaza, te los devuelve.</p>
+      <p class="suave">Retiras tus créditos al mismo valor, menos el 20% de comisión por retiro exitoso. Se descuentan al pedir el retiro; el administrador te envía el pago y lo marca como pagado. Si lo rechaza, te devuelve todos tus créditos y no se cobra comisión.</p>
       <div class="tienda" id="retiros">
-        <div class="paquete"><div><div class="pq-cant">10 créditos = $8.000 COP</div><div class="pq-precio">Recibes $7.200 COP</div><div class="pq-nota">Comisión 10%: $800 COP</div></div><button type="button" class="secundario" data-retiro="p10">Retirar</button></div>
-        <div class="paquete"><div><div class="pq-cant">25 créditos = $20.000 COP</div><div class="pq-precio">Recibes $18.000 COP</div><div class="pq-nota">Comisión 10%: $2.000 COP</div></div><button type="button" class="secundario" data-retiro="p25">Retirar</button></div>
-        <div class="paquete"><div><div class="pq-cant">50 créditos = $40.000 COP</div><div class="pq-precio">Recibes $36.000 COP</div><div class="pq-nota">Comisión 10%: $4.000 COP</div></div><button type="button" class="secundario" data-retiro="p50">Retirar</button></div>
+        <div class="paquete"><div><div class="pq-cant">10 créditos = $5.000 COP</div><div class="pq-precio">Recibes $4.000 COP</div><div class="pq-nota">Comisión 20%: $1.000 COP</div></div><button type="button" class="secundario" data-retiro="p10">Retirar</button></div>
+        <div class="paquete"><div><div class="pq-cant">25 créditos = $12.500 COP</div><div class="pq-precio">Recibes $10.000 COP</div><div class="pq-nota">Comisión 20%: $2.500 COP</div></div><button type="button" class="secundario" data-retiro="p25">Retirar</button></div>
+        <div class="paquete"><div><div class="pq-cant">50 créditos = $25.000 COP</div><div class="pq-precio">Recibes $20.000 COP</div><div class="pq-nota">Comisión 20%: $5.000 COP</div></div><button type="button" class="secundario" data-retiro="p50">Retirar</button></div>
       </div>
       <p id="msg-retiro" class="msg" role="status"></p>
       <h2 style="margin-top:20px">Mis retiros</h2>
@@ -313,9 +313,9 @@ input:focus{border-color:var(--cian)}
         <div class="cuerpo">
           <p>Los créditos son lo que se apuesta en cada partida. Los consigues en la tienda de monedas:</p>
           <ul>
-            <li>10 créditos = $8.000 COP</li>
-            <li>25 créditos = $20.000 COP</li>
-            <li>50 créditos = $40.000 COP</li>
+            <li>10 créditos = $5.000 COP</li>
+            <li>25 créditos = $12.500 COP</li>
+            <li>50 créditos = $25.000 COP</li>
           </ul>
           <ol>
             <li>En <b>Créditos</b> toca <b>Comprar</b> en el paquete que quieras y confirma la solicitud.</li>
@@ -323,7 +323,7 @@ input:focus{border-color:var(--cian)}
             <li>Puedes ver el estado en <b>Mis compras</b>: pendiente, aprobada o rechazada. Cuando se aprueba, tu saldo sube solo.</li>
           </ol>
           <p><b>Retirar:</b> en <b>Créditos</b>, dentro de «Retirar créditos», elige 10, 25 o 50 créditos, escribe dónde quieres recibir el pago y confirma. Tus créditos se descuentan al pedirlo y el administrador te envía el pago. Si lo rechaza, te los devuelve. Puedes ver el estado en <b>Mis retiros</b>.</p>
-          <p><b>Comisiones:</b> se cobra el 10% en cada consignación (cuando compras créditos) y el 10% en cada retiro. Por ejemplo, si retiras 25 créditos ($20.000 COP) recibes $18.000 COP. En las partidas no se cobra comisión: lo que ganas es tuyo.</p>
+          <p><b>Comisiones:</b> se cobra el 10% en cada consignación (cuando compras créditos) y el 20% en cada retiro exitoso. Por ejemplo, si retiras 25 créditos ($12.500 COP) recibes $10.000 COP. En las partidas no se cobra comisión: lo que ganas es tuyo.</p>
           <button type="button" class="ir" data-ir="creditos">Ir a Créditos</button>
         </div>
       </details>
@@ -918,8 +918,8 @@ function revisarLiquidacion() {
 }
 setInterval(revisarLiquidacion, 20000);
 
-// Retiros: mismos 3 valores de la tienda, menos 10% de comisión. El servidor calcula todo; esto solo lo muestra.
-const COMISION_RETIRO = 10;
+// Retiros: mismos 3 valores de la tienda, menos 20% de comisión. El servidor calcula todo; esto solo lo muestra.
+const COMISION_RETIRO = 20;
 const ESTADO_RETIRO = { pendiente: "Pendiente de pago", devolviendo: "Devolviendo créditos…", pagado: "Pagado ✓", rechazado: "Rechazado · créditos devueltos" };
 let retiroElegido = null, retirosCargando = false;
 const usd2 = (n) => "$" + Number(n).toFixed(2) + " USD";   // solo para retiros viejos que se pidieron en dólares
@@ -974,7 +974,7 @@ $("form-retiro").addEventListener("submit", async (ev) => {
 
 // Tienda de monedas: el jugador solicita un paquete y el administrador confirma el pago y lo acredita.
 // Precios en pesos colombianos (COP). Deben ser los mismos que el PAQUETES del servidor (functions/index.js).
-const PAQUETES = { p10: { creditos: 10, pesos: 8000 }, p25: { creditos: 25, pesos: 20000 }, p50: { creditos: 50, pesos: 40000 } };
+const PAQUETES = { p10: { creditos: 10, pesos: 5000 }, p25: { creditos: 25, pesos: 12500 }, p50: { creditos: 50, pesos: 25000 } };
 const ESTADO_COMPRA = { pendiente: "Pendiente de confirmación", procesando: "Acreditando…", aprobada: "Aprobada ✓", rechazada: "Rechazada" };
 let comprasCargando = false;
 async function cargarCompras() {
