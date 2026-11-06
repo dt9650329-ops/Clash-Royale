@@ -162,6 +162,23 @@ input:focus{border-color:var(--cian)}
 .mega-lideres li.mega-vacio{color:var(--suave);display:block}
 .mega-aporte{margin:0;text-align:center;color:var(--suave);font-size:.88rem}
 </style>
+<style id="css-torneos">
+/* Torneos por Pass Royale */
+.torneos{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.torneo{padding:14px 16px;border-radius:14px;border:2px solid var(--linea);background:rgba(5,11,32,.45)}
+.torneo.mio{border-color:var(--oro);box-shadow:0 0 18px rgba(253,181,43,.22)}
+.torneo-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.torneo-cab b{font-size:1.1em;overflow-wrap:anywhere}
+.torneo .estado{flex:none;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:700;border:1px solid var(--linea);color:var(--suave)}
+.torneo .estado.abierto{border-color:var(--oro);color:var(--oro)}
+.torneo .estado.ok{border-color:var(--ok);color:var(--ok)}
+.torneo .estado.mal{border-color:var(--error);color:var(--error)}
+.torneo dl{margin:10px 0 0;font-size:.95em}
+.torneo .desc{color:var(--suave);margin:8px 0 0;font-size:.95em;overflow-wrap:anywhere}
+.torneo .nota{margin:10px 0 0;font-weight:700}
+.torneo .acciones{display:flex;gap:8px;margin-top:12px}
+.torneo .acciones button{flex:1;width:auto}
+</style>
 </head>
 <body>
 <main>
@@ -221,6 +238,7 @@ input:focus{border-color:var(--cian)}
           <button type="button" data-sec="partida">Cuadrar partida</button>
           <button type="button" data-sec="tabla">Tabla de posiciones</button>
           <button type="button" data-sec="mega">Mega Legión</button>
+          <button type="button" data-sec="torneos">Torneos</button>
           <button type="button" data-sec="historial">Historial</button>
           <button type="button" data-sec="creditos">Créditos</button>
           <button type="button" data-sec="guia">Cómo jugar</button>
@@ -426,6 +444,18 @@ input:focus{border-color:var(--cian)}
         </div>
       </details>
 
+      <details>
+        <summary>10. Torneos y Pass Royale</summary>
+        <div class="cuerpo">
+          <ul>
+            <li>En <b>Torneos</b> te inscribes gratis: no se gastan créditos. Necesitas tener tu tag de Supercell vinculado.</li>
+            <li>Mientras las inscripciones estén abiertas puedes salirte. Cuando el administrador inicia el torneo, se cierran.</li>
+            <li>El ganador toca <b>Reclamar</b> y el administrador le entrega el Pass Royale.</li>
+          </ul>
+          <button type="button" class="ir" data-ir="torneos">Ir a Torneos</button>
+        </div>
+      </details>
+
       <p class="aviso">Esta página es independiente y no está afiliada a Supercell. Clash Royale es una marca de Supercell.</p>
     </div>
     </div>
@@ -500,6 +530,19 @@ input:focus{border-color:var(--cian)}
         </div>
         <p class="mega-aporte" id="mega-aporte"></p>
       </div>
+    </div>
+    </div>
+
+    <div class="seccion" data-sec="torneos">
+    <div class="panel">
+      <div class="barra">
+        <h2>Torneos</h2>
+        <button type="button" id="btn-torneos" class="secundario mini">Actualizar</button>
+      </div>
+      <p class="suave">Torneos gratis: te inscribes sin gastar créditos. El ganador reclama el Pass Royale.</p>
+      <p id="msg-torneos" class="msg" role="status"></p>
+      <ul id="tn-lista" class="torneos"></ul>
+      <p id="tn-vacio" class="suave oculto">Por ahora no hay torneos. Vuelve pronto.</p>
     </div>
     </div>
 
@@ -630,7 +673,7 @@ $("btn-google").onclick = async () => {
 $("btn-salir").onclick = () => auth.signOut();
 
 // --- Menú hamburguesa y secciones ---
-const SECCIONES = ["perfil", "clash", "partida", "tabla", "mega", "historial", "creditos", "guia"];
+const SECCIONES = ["perfil", "clash", "partida", "tabla", "mega", "torneos", "historial", "creditos", "guia"];
 
 function abrirMenu(abrir) {
   $("menu").classList.toggle("abierto", abrir);
@@ -652,6 +695,7 @@ function irA(sec) {
   if (sec === "partida") fnReto("expirarRetos").catch(() => {});
   if (sec === "creditos") { cargarCompras(); cargarRetiros(); }
   if (sec === "mega") cargarMega();
+  if (sec === "torneos") cargarTorneosPase();
 }
 
 $("btn-menu").onclick = () => abrirMenu(!$("menu").classList.contains("abierto"));
@@ -1166,6 +1210,99 @@ function pintarTabla(lista, miUid) {
   });
 }
 
+// --- Torneos por Pass Royale ---
+// Inscripción gratis (sin créditos). El ganador reclama el pase y el administrador lo entrega. Todo pasa por funciones del servidor.
+let torneosPase = [], seqTorneos = 0;
+const ESTADO_TORNEO = { abierto: "Inscripciones abiertas", "en-juego": "En juego", finalizado: "Finalizado", cancelado: "Cancelado" };
+const CLASE_TORNEO = { abierto: "abierto", finalizado: "ok", cancelado: "mal" };
+const nodo = (tag, clase, texto) => {
+  const x = document.createElement(tag);
+  if (clase) x.className = clase;
+  if (texto != null) x.textContent = texto;
+  return x;
+};
+
+async function accionTorneo(nombre, id, pregunta, ok) {
+  if (pregunta && !confirm(pregunta)) return;
+  mensaje("msg-torneos", "");
+  try {
+    await fnReto(nombre, { id });
+    mensaje("msg-torneos", ok, true);
+  } catch (e) {
+    mensaje("msg-torneos", msgFn(e));
+  }
+  cargarTorneosPase();
+}
+
+function tarjetaTorneoPase(t) {
+  const li = nodo("li", "torneo" + (t.soyGanador ? " mio" : ""));
+  const cab = nodo("div", "torneo-cab");
+  cab.append(nodo("b", "", t.nombre), nodo("span", "estado " + (CLASE_TORNEO[t.estado] || ""), ESTADO_TORNEO[t.estado] || t.estado));
+  li.appendChild(cab);
+
+  const dl = nodo("dl");
+  const dato = (k, v) => dl.append(nodo("dt", "", k), nodo("dd", "", v));
+  dato("Premio", t.premio);
+  dato("Inicio", t.inicio ? new Date(t.inicio).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : "Por anunciar");
+  dato("Inscritos", t.cupos ? t.inscritos + " de " + t.cupos : String(t.inscritos));
+  if (t.ganador) dato("Ganador", t.ganador.nombre + (t.ganador.tag ? " · " + t.ganador.tag : ""));
+  li.appendChild(dl);
+  if (t.descripcion) li.appendChild(nodo("p", "desc", t.descripcion));
+
+  const acc = nodo("div", "acciones");
+  const boton = (texto, clase, fn) => {
+    const b = nodo("button", clase, texto);
+    b.type = "button";
+    b.onclick = async () => { b.disabled = true; await fn(); b.disabled = false; };
+    acc.appendChild(b);
+  };
+  const nota = (texto, ya) => li.appendChild(nodo("p", "nota" + (ya ? " ya" : ""), texto));
+
+  if (t.estado === "abierto") {
+    if (t.inscrito) {
+      nota("Estás inscrito ✓", true);
+      boton("Salir del torneo", "secundario", () => accionTorneo("torneoSalir", t.id, "¿Salir de «" + t.nombre + "»?", "Saliste del torneo."));
+    } else if (t.cupos && t.inscritos >= t.cupos) {
+      nota("Sin cupos disponibles");
+    } else if (!perfilActual.tag) {
+      boton("Vincula tu tag para inscribirte", "secundario", async () => { location.hash = "clash"; });
+    } else {
+      boton("Inscribirme gratis", "primario", () => accionTorneo("torneoInscribirse", t.id, "", "¡Listo! Quedaste inscrito en «" + t.nombre + "»."));
+    }
+  } else if (t.estado === "en-juego") {
+    nota(t.inscrito ? "Estás inscrito. El torneo está en juego." : "Las inscripciones ya cerraron.", t.inscrito);
+  } else if (t.estado === "finalizado" && t.soyGanador) {
+    if (t.premioEntregado) nota("¡Tu " + t.premio + " ya fue entregado! ✓", true);
+    else if (t.premioReclamado) nota("Ya reclamaste tu premio. El administrador te lo enviará pronto.", true);
+    else boton("Reclamar mi " + t.premio, "primario", () => accionTorneo("torneoReclamar", t.id, "¿Reclamar tu " + t.premio + "?\n\nEl administrador verá tu tag de Supercell para enviártelo.", "Premio reclamado. El administrador te lo enviará pronto."));
+  } else if (t.estado === "cancelado") {
+    nota("Este torneo fue cancelado.");
+  }
+  if (acc.children.length) li.appendChild(acc);
+  return li;
+}
+
+function pintarTorneosPase() {
+  const ul = $("tn-lista");
+  ul.innerHTML = "";
+  torneosPase.forEach((t) => ul.appendChild(tarjetaTorneoPase(t)));
+  $("tn-vacio").classList.toggle("oculto", torneosPase.length > 0);
+}
+
+async function cargarTorneosPase() {
+  if (!auth.currentUser) return;
+  const mio = ++seqTorneos;   // si llega una respuesta vieja, se descarta
+  try {
+    const r = (await fnReto("torneosListar")).data || {};
+    if (mio !== seqTorneos) return;
+    torneosPase = r.torneos || [];
+    pintarTorneosPase();
+  } catch (e) {
+    if (mio === seqTorneos) mensaje("msg-torneos", "No pudimos cargar los torneos" + detalleError(e));
+  }
+}
+$("btn-torneos").onclick = () => cargarTorneosPase();
+
 // --- Historial de batallas amistosas ---
 function pintarHistorial(lista, miUid) {
   lista.sort((a, b) => b.fecha - a.fecha);
@@ -1263,6 +1400,7 @@ function entrarPerfil(user) {
   yaJugaron = new Set();
   jugadoresActual = [];
   retos = [];
+  torneosPase = []; $("tn-lista").innerHTML = "";
   mostrar("perfil");
   irA(location.hash.slice(1));
   const refPerfil = db.ref("users/" + user.uid);
