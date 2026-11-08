@@ -185,6 +185,25 @@ input:focus{border-color:var(--cian)}
 .torneo .tabla-tn .info{margin:0 0 8px;color:var(--suave);font-size:.88em}
 .torneo .tabla-tn table{font-size:.92em}
 </style>
+<style id="css-tabla-torneos">
+/* Tabla de posiciones: selector para ver también la clasificación de cada torneo */
+.tb-chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;margin:0 0 6px;-webkit-overflow-scrolling:touch}
+.tb-chips button{flex:none;padding:8px 14px;border-radius:999px;font-weight:700;font-size:.9em;cursor:pointer;background:transparent;color:var(--suave);border:2px solid var(--linea)}
+.tb-chips button.activo{background:var(--oro);color:#1b1300;border-color:var(--oro)}
+.tb-chips .lleno{margin-left:6px;font-size:.78em;opacity:.9}
+.tb-torneo .tb-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.tb-torneo .tb-cab b{font-size:1.1em;overflow-wrap:anywhere}
+.tb-torneo .estado{flex:none;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:700;border:1px solid var(--linea);color:var(--suave)}
+.tb-torneo .estado.abierto{border-color:var(--oro);color:var(--oro)}
+.tb-torneo .estado.ok{border-color:var(--ok);color:var(--ok)}
+.tb-torneo .estado.mal{border-color:var(--error);color:var(--error)}
+.tb-torneo .datos{margin:8px 0 12px;color:var(--suave);font-size:.92em;display:grid;gap:2px}
+.tb-torneo .datos .lleno{color:var(--ok);font-weight:700}
+.tb-torneo .mini{margin:0 0 12px}
+.tb-torneo .tabla-tn{overflow-x:auto}
+.tb-torneo .tabla-tn .info{margin:0 0 8px;color:var(--suave);font-size:.88em}
+.tb-torneo .tabla-tn table{font-size:.92em}
+</style>
 </head>
 <body>
 <main>
@@ -510,12 +529,16 @@ input:focus{border-color:var(--cian)}
     <div class="seccion" data-sec="tabla">
     <div class="panel">
       <h2>Tabla de posiciones</h2>
-      <p class="suave">Las victorias solo cuentan entre jugadores que son amigos en Clash Royale.</p>
-      <p id="msg-tabla" class="msg" role="status"></p>
-      <table>
-        <thead><tr><th class="num">#</th><th>Jugador</th><th class="num">V</th><th></th></tr></thead>
-        <tbody id="tabla-cuerpo"></tbody>
-      </table>
+      <div id="tb-chips" class="tb-chips oculto" role="group" aria-label="Elegir clasificación"></div>
+      <div id="tb-general">
+        <p class="suave">Las victorias solo cuentan entre jugadores que son amigos en Clash Royale.</p>
+        <p id="msg-tabla" class="msg" role="status"></p>
+        <table>
+          <thead><tr><th class="num">#</th><th>Jugador</th><th class="num">V</th><th></th></tr></thead>
+          <tbody id="tabla-cuerpo"></tbody>
+        </table>
+      </div>
+      <div id="tb-torneo" class="tb-torneo oculto"></div>
     </div>
     </div>
 
@@ -704,7 +727,7 @@ function irA(sec) {
   if (sec === "partida") fnReto("expirarRetos").catch(() => {});
   if (sec === "creditos") { cargarCompras(); cargarRetiros(); }
   if (sec === "mega") cargarMega();
-  if (sec === "torneos") cargarTorneosPase();
+  if (sec === "torneos" || sec === "tabla") cargarTorneosPase();   // la Tabla también muestra los torneos
 }
 
 $("btn-menu").onclick = () => abrirMenu(!$("menu").classList.contains("abierto"));
@@ -1222,6 +1245,7 @@ function pintarTabla(lista, miUid) {
 // --- Torneos por Pass Royale ---
 // Inscripción gratis (sin créditos). El ganador reclama el pase y el administrador lo entrega. Todo pasa por funciones del servidor.
 let torneosPase = [], seqTorneos = 0;
+let tbSel = "general";   // clasificación elegida en la Tabla de posiciones: "general" (amistosas) o el id de un torneo
 const tablasTn = new Set();   // torneos con la tabla abierta (se mantiene al refrescar)
 const ESTADO_JUEGO = { inPreparation: "en preparación", inProgress: "en juego", ended: "terminado" };
 const ESTADO_TORNEO = { abierto: "Inscripciones abiertas", "en-juego": "En juego", finalizado: "Finalizado", cancelado: "Cancelado" };
@@ -1254,6 +1278,7 @@ function pintarTablaTorneo(r) {
   } else {
     info("Cada victoria suma " + (r.puntosVictoria || 3) + " puntos. Desempate: diferencia de coronas y luego menos derrotas." + (r.estado === "abierto" ? " Los puntos cuentan desde que el torneo inicia." : ""));
   }
+  if (r.modo === "juego" && r.capacidadJuego) info("Plazas en Clash Royale: " + (r.total || 0) + " de " + r.capacidadJuego + ((r.total || 0) >= r.capacidadJuego ? " · ¡Lleno!" : "."));
   if (r.empate) info("Hay empate en el primer lugar.");
   if (!r.filas || !r.filas.length) { info("Todavía no hay resultados."); return out; }
 
@@ -1388,11 +1413,51 @@ async function cargarTorneosPase() {
     if (mio !== seqTorneos) return;
     torneosPase = r.torneos || [];
     pintarTorneosPase();
+    pintarChipsTabla();
   } catch (e) {
     if (mio === seqTorneos) mensaje("msg-torneos", "No pudimos cargar los torneos" + detalleError(e));
   }
 }
 $("btn-torneos").onclick = () => cargarTorneosPase();
+
+// --- Tabla de posiciones: además de las amistosas, la clasificación de cada torneo ---
+const tbTorneos = () => torneosPase.filter((t) => t.tablaDisponible && t.estado !== "cancelado");
+const torneoLleno = (t) => !!t.cupos && t.inscritos >= t.cupos;
+
+function pintarChipsTabla() {
+  const caja = $("tb-chips");
+  const lista = tbTorneos();
+  if (tbSel !== "general" && !lista.some((t) => t.id === tbSel)) tbSel = "general";   // ese torneo ya no está disponible
+  caja.classList.toggle("oculto", lista.length === 0);
+  caja.replaceChildren();
+  const chip = (texto, id, lleno) => {
+    const b = nodo("button", id === tbSel ? "activo" : "", texto);
+    b.type = "button";
+    if (lleno) b.appendChild(nodo("span", "lleno", "Lleno"));
+    b.onclick = () => { tbSel = id; pintarChipsTabla(); };
+    caja.appendChild(b);
+  };
+  chip("Amistosas", "general", false);
+  lista.forEach((t) => chip(t.nombre.length > 22 ? t.nombre.slice(0, 21) + "…" : t.nombre, t.id, torneoLleno(t)));
+  $("tb-general").classList.toggle("oculto", tbSel !== "general");
+  $("tb-torneo").classList.toggle("oculto", tbSel === "general");
+  if (tbSel !== "general") pintarTorneoEnTabla(lista.find((t) => t.id === tbSel));
+}
+
+function pintarTorneoEnTabla(t) {
+  const cab = nodo("div", "tb-cab");
+  cab.append(nodo("b", "", t.nombre), nodo("span", "estado " + (CLASE_TORNEO[t.estado] || ""), ESTADO_TORNEO[t.estado] || t.estado));
+  const datos = nodo("div", "datos");
+  datos.append(nodo("span", "", "Premio: " + t.premio));
+  datos.append(nodo("span", torneoLleno(t) ? "lleno" : "", "Inscritos aquí: " + (t.cupos ? t.inscritos + " de " + t.cupos : t.inscritos) + (torneoLleno(t) ? " · ¡Cupos llenos!" : "")));
+  if (t.ganador) datos.append(nodo("span", "", "Ganador: " + t.ganador.nombre));
+  const tabla = nodo("div", "tabla-tn");
+  const act = nodo("button", "secundario mini", "Actualizar");
+  act.type = "button";
+  act.onclick = async () => { act.disabled = true; await cargarTablaTorneo(t, tabla); act.disabled = false; };
+  $("tb-torneo").replaceChildren(cab, datos, act, tabla);
+  cargarTablaTorneo(t, tabla);
+}
 
 // --- Historial de batallas amistosas ---
 function pintarHistorial(lista, miUid) {
