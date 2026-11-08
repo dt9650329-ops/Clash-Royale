@@ -476,8 +476,7 @@ input:focus{border-color:var(--cian)}
             <li>En <b>Torneos</b> te inscribes gratis: no se gastan créditos. Necesitas tener tu tag de Supercell vinculado.</li>
             <li>Mientras las inscripciones estén abiertas puedes salirte. Cuando el administrador inicia el torneo, se cierran.</li>
             <li>El ganador toca <b>Reclamar</b> y el administrador le entrega el Pass Royale.</li>
-            <li><b>Torneo en el juego:</b> se juega dentro de Clash Royale. Al inscribirte ves el código (y la clave, si tiene) para entrar, y la tabla sale directo del juego.</li>
-            <li><b>Torneo individual:</b> juegas batallas amistosas contra otros inscritos usando su enlace de batalla. Cada victoria suma puntos en la tabla del torneo.</li>
+            <li>Los torneos se juegan dentro de Clash Royale (máximo 50 jugadores). Al inscribirte ves el código (y la clave, si tiene) para entrar, y la tabla sale directo del juego.</li>
             <li>Toca <b>Ver tabla</b> en el torneo para ver cómo vas.</li>
           </ul>
           <button type="button" class="ir" data-ir="torneos">Ir a Torneos</button>
@@ -1273,10 +1272,8 @@ function pintarTablaTorneo(r) {
   const out = [];
   const info = (txt) => out.push(nodo("p", "info", txt));
   if (r.sinTag) { info("El administrador todavía no publica el código del torneo en Clash Royale. Vuelve en un rato."); return out; }
-  if (r.modo === "juego") {
+  {
     info("Tabla del torneo en Clash Royale" + (r.estadoJuego ? " · " + (ESTADO_JUEGO[r.estadoJuego] || r.estadoJuego) : "") + ". Con ✓ están los inscritos aquí; el premio es para el mejor puesto inscrito.");
-  } else {
-    info("Cada victoria suma " + (r.puntosVictoria || 3) + " puntos. Desempate: diferencia de coronas y luego menos derrotas." + (r.estado === "abierto" ? " Los puntos cuentan desde que el torneo inicia." : ""));
   }
   if (r.modo === "juego" && r.capacidadJuego) info("Plazas en Clash Royale: " + (r.total || 0) + " de " + r.capacidadJuego + ((r.total || 0) >= r.capacidadJuego ? " · ¡Lleno!" : "."));
   if (r.empate) info("Hay empate en el primer lugar.");
@@ -1328,9 +1325,7 @@ function tarjetaTorneoPase(t) {
   const cab = nodo("div", "torneo-cab");
   cab.append(nodo("b", "", t.nombre), nodo("span", "estado " + (CLASE_TORNEO[t.estado] || ""), ESTADO_TORNEO[t.estado] || t.estado));
   li.appendChild(cab);
-  li.appendChild(nodo("p", "modo", t.modo === "juego"
-    ? "Se juega dentro de Clash Royale (torneo por gemas)."
-    : "Se juega con batallas amistosas entre inscritos: cada victoria vale " + (t.puntosVictoria || 3) + " puntos."));
+  li.appendChild(nodo("p", "modo", "Se juega dentro de Clash Royale (torneo por gemas)."));
 
   const dl = nodo("dl");
   const dato = (k, v) => dl.append(nodo("dt", "", k), nodo("dd", "", v));
@@ -1437,7 +1432,7 @@ function pintarChipsTabla() {
     b.onclick = () => { tbSel = id; pintarChipsTabla(); };
     caja.appendChild(b);
   };
-  chip("Amistosas", "general", false);
+  chip("Combates 1v1", "general", false);
   lista.forEach((t) => chip(t.nombre.length > 22 ? t.nombre.slice(0, 21) + "…" : t.nombre, t.id, torneoLleno(t)));
   $("tb-general").classList.toggle("oculto", tbSel !== "general");
   $("tb-torneo").classList.toggle("oculto", tbSel === "general");
