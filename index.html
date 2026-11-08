@@ -1275,7 +1275,12 @@ function pintarTablaTorneo(r) {
   {
     info("Tabla del torneo en Clash Royale" + (r.estadoJuego ? " · " + (ESTADO_JUEGO[r.estadoJuego] || r.estadoJuego) : "") + ". Con ✓ están los inscritos aquí; el premio es para el mejor puesto inscrito.");
   }
-  if (r.modo === "juego" && r.capacidadJuego) info("Plazas en Clash Royale: " + (r.total || 0) + " de " + r.capacidadJuego + ((r.total || 0) >= r.capacidadJuego ? " · ¡Lleno!" : "."));
+  if (r.capacidadJuego) info("Jugadores en Clash Royale: " + (r.total || 0) + " de " + r.capacidadJuego + ((r.total || 0) >= r.capacidadJuego ? " · ¡Lleno!" : "."));
+  if (r.actualizadoEn) {
+    const seg = Math.max(0, Math.round((Date.now() - r.actualizadoEn) / 1000));
+    const hace = seg < 60 ? "hace " + seg + " s" : "hace " + Math.round(seg / 60) + " min";
+    info((r.datosViejos ? "⚠ Clash Royale no respondió: se muestran los datos de " + hace + ". " : "Datos de Clash Royale · actualizados " + hace + ". ") + "Los puntos pueden tardar unos minutos en aparecer; toca Ver tabla para refrescar.");
+  }
   if (r.empate) info("Hay empate en el primer lugar.");
   if (!r.filas || !r.filas.length) { info("Todavía no hay resultados."); return out; }
 
