@@ -476,7 +476,7 @@ input:focus{border-color:var(--cian)}
             <li>En <b>Torneos</b> te inscribes gratis: no se gastan créditos. Necesitas tener tu tag de Supercell vinculado.</li>
             <li>Mientras las inscripciones estén abiertas puedes salirte. Cuando el administrador inicia el torneo, se cierran.</li>
             <li>El ganador toca <b>Reclamar</b> y el administrador le entrega el Pass Royale.</li>
-            <li>Los torneos se juegan dentro de Clash Royale (máximo 50 jugadores). Al inscribirte ves el código (y la clave, si tiene) para entrar, y la tabla sale directo del juego.</li>
+            <li>Los torneos se juegan dentro de Clash Royale. Al inscribirte ves el código (y la clave, si tiene) para entrar, y la tabla sale directo del juego.</li>
             <li>Toca <b>Ver tabla</b> en el torneo para ver cómo vas.</li>
           </ul>
           <button type="button" class="ir" data-ir="torneos">Ir a Torneos</button>
@@ -1330,7 +1330,6 @@ function tarjetaTorneoPase(t) {
   const dl = nodo("dl");
   const dato = (k, v) => dl.append(nodo("dt", "", k), nodo("dd", "", v));
   dato("Premio", t.premio);
-  dato("Inicio", t.inicio ? new Date(t.inicio).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : "Por anunciar");
   dato("Inscritos", t.cupos ? t.inscritos + " de " + t.cupos : String(t.inscritos));
   if (t.ganador) dato("Ganador", t.ganador.nombre + (t.ganador.tag ? " · " + t.ganador.tag : ""));
   li.appendChild(dl);
