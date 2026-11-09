@@ -8,8 +8,13 @@
       "database.rules.json",
       "functions/**",
       "**/node_modules/**",
-      "**/.*",
+      ".git/**",
+      "**/.git/**",
+      ".firebase/**",
       ".github/**",
+      "**/.*",
+      "package.json",
+      "package-lock.json",
       "*.md"
     ]
   }
