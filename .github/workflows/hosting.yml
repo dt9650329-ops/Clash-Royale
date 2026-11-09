@@ -16,5 +16,6 @@ jobs:
         env:
           RAW_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
-          export FIREBASE_TOKEN="$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]' | sed 's/\xe2\x80[\x90-\x95]/-/g')"
+          export FIREBASE_TOKEN="$(python3 -c "import os,re;t=os.environ['RAW_TOKEN'];t=re.sub('[\u2010-\u2015\u2212]','-',t);print(re.sub(r'\s','',t),end='')")"
+          python3 -c "import os;print('caracteres raros restantes:',sum(1 for c in os.environ['FIREBASE_TOKEN'] if ord(c)>127))"
           npx -y firebase-tools deploy --only hosting --project clash-royale-9e27b
