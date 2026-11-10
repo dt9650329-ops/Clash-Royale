@@ -118,6 +118,9 @@ input:focus{border-color:var(--cian)}
 .paquete .pq-cant{font-weight:800;font-size:1.15em}
 .paquete .pq-precio{color:var(--oro);font-weight:700}
 .paquete button{width:auto;padding:10px 18px}
+.paquete{flex-wrap:wrap}
+.pq-pagos{display:flex;gap:8px;flex-basis:100%}
+.pq-pagos button{flex:1;padding:10px 6px}
 .paquete .pq-nota{color:var(--suave);font-size:.85em}
 #dlg-retiro .copas{font-size:2.2rem;margin:4px 0}
 #dlg-retiro label{text-align:left}
@@ -324,9 +327,9 @@ input:focus{border-color:var(--cian)}
       <p class="copas" id="p-creditos">0</p>
       <h2 style="margin-top:20px">Tienda de monedas</h2>
       <div class="tienda" id="tienda">
-        <div class="paquete"><div><div class="pq-cant">10 créditos</div><div class="pq-precio">= $5.000 COP</div></div><button type="button" class="primario" data-paquete="p10">Comprar</button></div>
-        <div class="paquete"><div><div class="pq-cant">25 créditos</div><div class="pq-precio">= $12.500 COP</div></div><button type="button" class="primario" data-paquete="p25">Comprar</button></div>
-        <div class="paquete"><div><div class="pq-cant">50 créditos</div><div class="pq-precio">= $25.000 COP</div></div><button type="button" class="primario" data-paquete="p50">Comprar</button></div>
+        <div class="paquete"><div><div class="pq-cant">10 créditos</div><div class="pq-precio">= $5.000 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-paquete="p10" data-metodo="Nequi">Nequi</button><button type="button" class="primario" data-paquete="p10" data-metodo="PayPal">PayPal</button><button type="button" class="primario" data-paquete="p10" data-metodo="Binance">Binance</button></div></div>
+        <div class="paquete"><div><div class="pq-cant">25 créditos</div><div class="pq-precio">= $12.500 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-paquete="p25" data-metodo="Nequi">Nequi</button><button type="button" class="primario" data-paquete="p25" data-metodo="PayPal">PayPal</button><button type="button" class="primario" data-paquete="p25" data-metodo="Binance">Binance</button></div></div>
+        <div class="paquete"><div><div class="pq-cant">50 créditos</div><div class="pq-precio">= $25.000 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-paquete="p50" data-metodo="Nequi">Nequi</button><button type="button" class="primario" data-paquete="p50" data-metodo="PayPal">PayPal</button><button type="button" class="primario" data-paquete="p50" data-metodo="Binance">Binance</button></div></div>
       </div>
       <p id="msg-compra" class="msg" role="status"></p>
       <h2 style="margin-top:20px">Mis compras</h2>
@@ -388,7 +391,7 @@ input:focus{border-color:var(--cian)}
             <li>50 créditos = $25.000 COP</li>
           </ul>
           <ol>
-            <li>En <b>Créditos</b> toca <b>Comprar</b> en el paquete que quieras y confirma la solicitud.</li>
+            <li>En <b>Créditos</b> elige el paquete y toca cómo quieres pagar (<b>Nequi</b>, <b>PayPal</b> o <b>Binance</b>): se abre WhatsApp con el mensaje listo para enviarle al administrador.</li>
             <li>El administrador confirma tu pago y te acredita los créditos.</li>
             <li>Puedes ver el estado en <b>Mis compras</b>: pendiente, aprobada o rechazada. Cuando se aprueba, tu saldo sube solo.</li>
           </ol>
@@ -1143,17 +1146,27 @@ async function cargarCompras() {
   } catch (e) { console.warn("misCompras", e); }
   comprasCargando = false;
 }
+const WHATSAPP_PAGOS = "573150522339";   // WhatsApp del administrador (pagos)
 document.querySelectorAll("#tienda [data-paquete]").forEach((b) => {
   b.onclick = async () => {
-    const p = PAQUETES[b.dataset.paquete];
-    if (!p || !confirm("¿Solicitar " + p.creditos + " créditos por " + cop(p.pesos) + "?\n\nEl administrador confirmará tu pago y te acreditará los créditos.")) return;
-    b.disabled = true; mensaje("msg-compra", "");
+    const p = PAQUETES[b.dataset.paquete], metodo = b.dataset.metodo || "";
+    if (!p || !confirm("¿Comprar " + p.creditos + " créditos por " + cop(p.pesos) + " con " + metodo + "?\n\nSe abrirá WhatsApp para coordinar el pago con el administrador.")) return;
+    // WhatsApp se abre ya, en el mismo toque (si se espera a la red, el navegador del celular puede bloquearlo)
+    const u = auth.currentUser;
+    const texto = "Hola, quiero comprar " + p.creditos + " créditos (" + cop(p.pesos) + ") en Legión Real. Pago con " + metodo + "." + (u && u.email ? "\nMi cuenta: " + u.email : "");
+    const url = "https://wa.me/" + WHATSAPP_PAGOS + "?text=" + encodeURIComponent(texto);
+    const ventana = window.open(url, "_blank");
+    const botones = document.querySelectorAll("#tienda [data-paquete]");
+    botones.forEach((x) => { x.disabled = true; }); mensaje("msg-compra", "");
+    let ok = false;
     try {
       await fnReto("solicitarCompra", { paquete: b.dataset.paquete });
-      mensaje("msg-compra", "Solicitud enviada. El administrador confirmará tu pago y verás tus créditos aquí", true);
+      ok = true;
+      mensaje("msg-compra", "Solicitud registrada. Termina el pago por WhatsApp y el administrador te acreditará los créditos", true);
       cargarCompras();
     } catch (e) { mensaje("msg-compra", msgFn(e) + detalleError(e)); }
-    b.disabled = false;
+    botones.forEach((x) => { x.disabled = false; });
+    if (!ventana) window.location.href = url;   // el navegador bloqueó la ventana nueva: se abre en esta misma
   };
 });
 $("pa-buscar").oninput = pintarPartidas;
