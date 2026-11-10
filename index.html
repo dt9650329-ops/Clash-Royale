@@ -88,6 +88,7 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
 .chip{padding:8px 14px;border-radius:999px;border:2px solid var(--linea);background:none;color:var(--texto);font-weight:700;cursor:pointer}
 .chip.activa{background:var(--oro);color:#2A1D00;border-color:var(--oro)}
+.chip.bloq,.chip.bloq:disabled{opacity:.4;cursor:not-allowed}
 .historial li{align-items:center}
 .historial li .mini{flex:none}
 
@@ -400,7 +401,7 @@ input:focus{border-color:var(--cian)}
       <details>
         <summary>4. Cuadra una partida</summary>
         <div class="cuerpo">
-          <p>En <b>Cuadrar partida</b> eliges cuántos créditos apuestas (desde 5, de 5 en 5) y cómo quieres jugar:</p>
+          <p>En <b>Cuadrar partida</b> eliges cuántos créditos apuestas (los montos con candado 🔒 están bloqueados por ahora) y cómo quieres jugar:</p>
           <ul>
             <li><b>Jugar ya:</b> tu reto queda abierto como máximo 5 minutos esperando rival. Si nadie lo acepta, se te devuelven los créditos.</li>
             <li><b>Programar:</b> eliges fecha y hora, desde 2 minutos hasta 7 días después.</li>
@@ -492,7 +493,7 @@ input:focus{border-color:var(--cian)}
       <h2>Cuadrar partida</h2>
       <p class="suave">Tus créditos: <b id="pa-saldo">0</b></p>
       <form id="form-reto" novalidate>
-        <label>Monto a apostar<input id="pa-monto" type="number" inputmode="numeric" min="5" step="5" placeholder="10"></label>
+        <label>Monto a apostar<input id="pa-monto" type="number" inputmode="numeric" min="1" step="1" value="1" readonly placeholder="1"></label>
         <div class="chips" id="pa-chips"></div>
         <div class="chips" id="pa-modo">
           <button type="button" class="chip activa" data-modo="ya">Jugar ya</button>
@@ -915,18 +916,35 @@ $("dlg-copiar").onclick = async () => {
 };
 
 // --- Cuadrar partida ---
-const MONTOS = [5, 10, 20, 30];
+let MONTOS = [1, 5, 10, 20, 30];
+let MONTOS_ACTIVOS = [1];   // se actualiza desde el servidor (lo activa el admin); mientras carga, solo 1
 let saldo = 0, retos = [], modoReto = "ya", vistaPartidas = "programado";
 const fnReto = (nombre, datos) => functions.httpsCallable(nombre)(datos);
 const msgFn = (e) => (((e.code || "").startsWith("functions/") && !["functions/internal", "functions/unknown"].includes(e.code)) ? e.message : "No pudimos completar la acción. Intenta de nuevo") + detalleError(e);
 const cuandoTxt = (r) => r.modo === "programado" ? new Date(r.cuando).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) : "Ya";
 
-MONTOS.forEach((m) => {
-  const b = document.createElement("button");
-  b.type = "button"; b.className = "chip"; b.textContent = m;
-  b.onclick = () => { $("pa-monto").value = m; };
-  $("pa-chips").appendChild(b);
-});
+function pintarMontos() {
+  const caja = $("pa-chips"); caja.innerHTML = "";
+  MONTOS.forEach((m) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = m;
+    if (MONTOS_ACTIVOS.includes(m)) b.onclick = () => { $("pa-monto").value = m; pintarMontos(); };
+    else { b.classList.add("bloq"); b.disabled = true; b.textContent = "🔒 " + m; b.title = "Bloqueado por ahora"; }
+    if (Number($("pa-monto").value) === m) b.classList.add("activa");
+    caja.appendChild(b);
+  });
+}
+async function cargarMontos() {
+  try {
+    const r = (await fnReto("montosApuesta")).data;
+    MONTOS = r.opciones; MONTOS_ACTIVOS = r.activos;
+    if (!MONTOS_ACTIVOS.includes(Number($("pa-monto").value))) $("pa-monto").value = MONTOS_ACTIVOS[0];
+  } catch (e) { /* si falla, se queda con lo último que se supo */ }
+  pintarMontos();
+}
+pintarMontos();
+document.addEventListener("visibilitychange", () => { if (!document.hidden && auth.currentUser) cargarMontos(); });
+setInterval(() => { if (auth.currentUser && !document.hidden) cargarMontos(); }, 60000);
 document.querySelectorAll("#pa-modo [data-modo]").forEach((b) => {
   b.onclick = () => {
     modoReto = b.dataset.modo;
@@ -939,7 +957,7 @@ $("form-reto").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   mensaje("msg-reto", "");
   const monto = Number($("pa-monto").value);
-  if (!Number.isInteger(monto) || monto <= 0) return mensaje("msg-reto", "Escribe un monto válido");
+  if (!MONTOS_ACTIVOS.includes(monto)) return mensaje("msg-reto", "Ese monto está bloqueado por ahora");
   if (monto > saldo) return mensaje("msg-reto", "No tienes créditos suficientes");
   let cuando = null;
   if (modoReto === "programado") {
@@ -1575,7 +1593,7 @@ function entrarPerfil(user) {
   const refJug = db.ref("jugadores").orderByChild("creadoEn");
   const a = refPerfil.on("value", (s) => pintarPerfil(s.val() || {}, user));
   const b = refCred.on("value", (s) => { saldo = s.val() || 0; $("p-creditos").textContent = saldo.toLocaleString("es-CO"); $("pa-saldo").textContent = saldo.toLocaleString("es-CO"); pintarPartidas(); cargarCompras(); cargarRetiros(); });
-  fnReto("creditosPrueba").catch(() => {});   // 🧪 modo pruebas: la cuenta recibe 1.000.000 de créditos (una vez)
+  cargarMontos();   // qué montos de apuesta están activos (lo decide el admin)
   const refRetos = db.ref("retos").orderByChild("creadoEn").limitToLast(100);
   const f = refRetos.on("value", (s) => {
     retos = [];
