@@ -452,7 +452,7 @@ input:focus{border-color:var(--cian)}
         <div class="cuerpo">
           <ul>
             <li>La <b>tabla</b> ordena a los jugadores por victorias en amistosas entre jugadores de esta página. Con igual número de victorias va primero quien se registró antes.</li>
-            <li>El <b>historial</b> muestra las últimas batallas registradas. Toca <b>Actualizar</b> para revisar si hay nuevas.</li>
+            <li>Tu <b>historial</b> muestra solo las batallas que tú has jugado contra otros jugadores. Toca <b>Actualizar</b> para revisar si hay nuevas.</li>
           </ul>
           <button type="button" class="ir" data-ir="historial">Ir al historial</button>
         </div>
@@ -581,12 +581,12 @@ input:focus{border-color:var(--cian)}
     <div class="seccion" data-sec="historial">
     <div class="panel">
       <div class="barra">
-        <h2>Historial</h2>
+        <h2>Mi historial</h2>
         <button type="button" id="btn-actualizar" class="secundario mini">Actualizar</button>
       </div>
       <p id="msg-historial" class="msg" role="status"></p>
       <ul id="historial-lista" class="historial"></ul>
-      <p id="historial-vacio" class="suave">Aún no hay batallas amistosas entre jugadores de la tabla.</p>
+      <p id="historial-vacio" class="suave">Aún no has jugado batallas amistosas contra otros jugadores.</p>
     </div>
     </div>
   </section>
@@ -1495,12 +1495,14 @@ function pintarHistorial(lista, miUid) {
   ul.innerHTML = "";
   $("historial-vacio").classList.toggle("oculto", lista.length > 0);
   lista.forEach((h) => {
+    const gane = h.ganadorUid === miUid;
     const li = document.createElement("li");
     const txt = document.createElement("span");
-    const g = document.createElement("b");
-    g.textContent = h.ganadorNombre;
-    txt.append(g, " " + h.coronasGanador + "–" + h.coronasPerdedor + " " + h.perdedorNombre);
-    if (h.ganadorUid === miUid || h.perdedorUid === miUid) txt.style.fontWeight = "700";
+    const r = document.createElement("b");
+    r.textContent = gane ? "Ganaste" : "Perdiste";
+    const rival = gane ? h.perdedorNombre : h.ganadorNombre;
+    const mias = gane ? h.coronasGanador : h.coronasPerdedor, suyas = gane ? h.coronasPerdedor : h.coronasGanador;
+    txt.append(r, " vs " + rival + " · " + mias + "–" + suyas);
     const f = document.createElement("span");
     f.className = "fecha";
     f.textContent = new Date(h.fecha).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" });
@@ -1508,12 +1510,27 @@ function pintarHistorial(lista, miUid) {
     ul.appendChild(li);
   });
 }
+// Solo trae MIS batallas (el servidor filtra; nunca llegan las partidas de los demás).
+async function cargarMiHistorial() {
+  const user = auth.currentUser; if (!user) return;
+  try {
+    const r = (await functions.httpsCallable("miHistorial")()).data;
+    const lista = r.partidas || [];
+    yaJugaron = new Set();
+    lista.forEach((h) => { yaJugaron.add(h.ganadorUid === user.uid ? h.perdedorUid : h.ganadorUid); });
+    pintarHistorial(lista, user.uid);
+    if (jugadoresActual.length) pintarTabla(jugadoresActual.slice(), user.uid);
+  } catch (e) { mensaje("msg-historial", "No pudimos cargar tu historial. Intenta de nuevo" + detalleError(e)); }
+}
+let tmrHist = null;
+const cargarMiHistorialPronto = () => { clearTimeout(tmrHist); tmrHist = setTimeout(cargarMiHistorial, 1500); };
 
 async function actualizarTorneo(silencioso) {
   if (!silencioso) mensaje("msg-historial", "Actualizando…", true);
   $("btn-actualizar").disabled = true;
   try {
     await functions.httpsCallable("actualizarTorneo")();
+    await cargarMiHistorial();
     if (!silencioso) mensaje("msg-historial", "Historial actualizado", true);
   } catch (e) {
     if (!silencioso) {
@@ -1600,6 +1617,7 @@ function entrarPerfil(user) {
     s.forEach((h) => { retos.push(Object.assign({ id: h.key }, h.val())); });
     pintarPartidas();
     revisarLiquidacion();
+    cargarMiHistorialPronto();   // si un reto terminó, su batalla entra a mi historial
   }, (e) => mensaje("msg-partidas", "No pudimos cargar los retos. Revisa las reglas de la base de datos" + detalleError(e)));
   const c = refJug.on("value", (s) => {
     const lista = [];
@@ -1613,19 +1631,8 @@ function entrarPerfil(user) {
     amigosSet = new Set(Object.keys(s.val() || {}));
     if (jugadoresActual.length) pintarTabla(jugadoresActual.slice(), user.uid);
   }, (err) => console.error(err));
-  const refHist = db.ref("historial").orderByChild("fecha").limitToLast(30);
-  const d = refHist.on("value", (s) => {
-    const lista = [];
-    s.forEach((h) => { lista.push(h.val()); });
-    yaJugaron = new Set();
-    lista.forEach((h) => {
-      if (h.ganadorUid === user.uid) yaJugaron.add(h.perdedorUid);
-      else if (h.perdedorUid === user.uid) yaJugaron.add(h.ganadorUid);
-    });
-    pintarHistorial(lista, user.uid);
-    if (jugadoresActual.length) pintarTabla(jugadoresActual.slice(), user.uid);
-  }, (e) => mensaje("msg-historial", "No pudimos cargar el historial. Revisa las reglas de la base de datos" + detalleError(e)));
-  detener.push(() => refPerfil.off("value", a), () => refCred.off("value", b), () => refJug.off("value", c), () => refHist.off("value", d), () => refAmigos.off("value", e), () => refRetos.off("value", f));
+  cargarMiHistorial();
+  detener.push(() => refPerfil.off("value", a), () => refCred.off("value", b), () => refJug.off("value", c), () => refAmigos.off("value", e), () => refRetos.off("value", f));
 }
 
 // --- Qué pantalla mostrar al abrir la página ---
