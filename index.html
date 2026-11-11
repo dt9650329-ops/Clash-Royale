@@ -89,6 +89,11 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
 .chip{padding:8px 14px;border-radius:999px;border:2px solid var(--linea);background:none;color:var(--texto);font-weight:700;cursor:pointer}
 .chip.activa{background:var(--oro);color:#2A1D00;border-color:var(--oro)}
 .chip.bloq,.chip.bloq:disabled{opacity:.4;cursor:not-allowed}
+.nivel-caja{margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--linea)}
+.nivel-fila{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.nivel-num{font-family:"Lilita One","Nunito",system-ui,sans-serif;font-size:2.4rem;line-height:1;color:var(--oro)}
+.xp-barra{height:14px;border-radius:999px;background:rgba(31,76,156,.5);overflow:hidden;margin:12px 0 6px}
+.xp-relleno{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--oro),#FFE08A);transition:width .6s ease}
 .historial li{align-items:center}
 .historial li .mini{flex:none}
 
@@ -280,6 +285,13 @@ input:focus{border-color:var(--cian)}
 
     <div class="seccion activa" data-sec="perfil">
     <div class="panel">
+      <div class="nivel-caja" id="nivel-caja">
+        <h2>Mi nivel</h2>
+        <div class="nivel-fila"><span class="nivel-num" id="nv-num">Nivel 1</span><span id="nv-txt" class="suave" style="margin:0">Cargando…</span></div>
+        <div class="xp-barra" role="progressbar" aria-label="Progreso de XP"><div class="xp-relleno" id="nv-barra"></div></div>
+        <p class="suave" id="nv-xp" style="margin:0 0 6px"></p>
+        <p class="suave" id="nv-ayuda" style="margin:0;font-size:.92rem"></p>
+      </div>
       <h2>Mis datos</h2>
       <dl>
         <dt>Correo</dt><dd id="p-correo"></dd>
@@ -327,6 +339,7 @@ input:focus{border-color:var(--cian)}
       <h2>Créditos</h2>
       <p class="copas" id="p-creditos">0</p>
       <h2 style="margin-top:20px">Tienda de monedas</h2>
+      <p class="suave" style="margin:0 0 12px">Cada moneda que recargas te da <b>1 XP</b> y sube tu nivel: con más nivel puedes apostar montos más altos.</p>
       <div class="tienda" id="tienda">
         <div class="paquete"><div><div class="pq-cant">10 créditos</div><div class="pq-precio">= $5.500 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-paquete="p10" data-metodo="Nequi">Nequi</button><button type="button" class="primario" data-paquete="p10" data-metodo="PayPal">PayPal</button><button type="button" class="primario" data-paquete="p10" data-metodo="Binance">Binance</button></div></div>
         <div class="paquete"><div><div class="pq-cant">25 créditos</div><div class="pq-precio">= $13.750 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-paquete="p25" data-metodo="Nequi">Nequi</button><button type="button" class="primario" data-paquete="p25" data-metodo="PayPal">PayPal</button><button type="button" class="primario" data-paquete="p25" data-metodo="Binance">Binance</button></div></div>
@@ -938,13 +951,32 @@ const fnReto = (nombre, datos) => functions.httpsCallable(nombre)(datos);
 const msgFn = (e) => (((e.code || "").startsWith("functions/") && !["functions/internal", "functions/unknown"].includes(e.code)) ? e.message : "No pudimos completar la acción. Intenta de nuevo") + detalleError(e);
 const cuandoTxt = (r) => r.modo === "programado" ? new Date(r.cuando).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) : "Ya";
 
+let NIVEL = null;   // nivel y XP del jugador (lo manda el servidor junto con los montos)
+const montoMaxNivel = () => (NIVEL ? NIVEL.montoMax : MONTOS[0]);   // mientras carga, solo el monto más bajo
+function pintarNivel() {
+  if (!NIVEL || !$("nv-num")) return;
+  const n = NIVEL, base = n.niveles[n.nivel - 1] || 0;
+  $("nv-num").textContent = "Nivel " + n.nivel;
+  $("nv-txt").textContent = "Puedes apostar hasta " + n.montoMax + (n.montoMax === 1 ? " moneda" : " monedas");
+  if (n.siguienteXp == null) {
+    $("nv-barra").style.width = "100%";
+    $("nv-xp").textContent = n.xp + " XP · nivel máximo";
+    $("nv-ayuda").textContent = "¡Ya desbloqueaste todos los montos de apuesta!";
+  } else {
+    const pct = Math.max(0, Math.min(100, ((n.xp - base) / Math.max(1, n.siguienteXp - base)) * 100));
+    $("nv-barra").style.width = pct + "%";
+    $("nv-xp").textContent = n.xp + " / " + n.siguienteXp + " XP";
+    $("nv-ayuda").textContent = "Te faltan " + (n.siguienteXp - n.xp) + " XP para el nivel " + (n.nivel + 1) + ", donde podrás apostar " + n.siguienteMonto + " monedas. Cada moneda que recargas te da 1 XP.";
+  }
+}
 function pintarMontos() {
   const caja = $("pa-chips"); caja.innerHTML = "";
   MONTOS.forEach((m) => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "chip"; b.textContent = m;
-    if (MONTOS_ACTIVOS.includes(m)) b.onclick = () => { $("pa-monto").value = m; pintarMontos(); };
-    else { b.classList.add("bloq"); b.disabled = true; b.textContent = "🔒 " + m; b.title = "Bloqueado por ahora"; }
+    const nivelOk = m <= montoMaxNivel();
+    if (MONTOS_ACTIVOS.includes(m) && nivelOk) b.onclick = () => { $("pa-monto").value = m; pintarMontos(); };
+    else { b.classList.add("bloq"); b.disabled = true; b.textContent = "🔒 " + m; b.title = !nivelOk ? "Se desbloquea en el nivel " + (MONTOS.indexOf(m) + 1) : "Bloqueado por ahora"; }
     if (Number($("pa-monto").value) === m) b.classList.add("activa");
     caja.appendChild(b);
   });
@@ -953,7 +985,9 @@ async function cargarMontos() {
   try {
     const r = (await fnReto("montosApuesta")).data;
     MONTOS = r.opciones; MONTOS_ACTIVOS = r.activos;
-    if (!MONTOS_ACTIVOS.includes(Number($("pa-monto").value))) $("pa-monto").value = MONTOS_ACTIVOS[0];
+    if (r.nivel) { NIVEL = r; pintarNivel(); }
+    const usables = MONTOS_ACTIVOS.filter((m) => m <= montoMaxNivel());
+    if (!usables.includes(Number($("pa-monto").value))) $("pa-monto").value = usables.length ? usables[0] : MONTOS_ACTIVOS[0];
   } catch (e) { /* si falla, se queda con lo último que se supo */ }
   pintarMontos();
 }
@@ -973,6 +1007,7 @@ $("form-reto").addEventListener("submit", async (ev) => {
   mensaje("msg-reto", "");
   const monto = Number($("pa-monto").value);
   if (!MONTOS_ACTIVOS.includes(monto)) return mensaje("msg-reto", "Ese monto está bloqueado por ahora");
+  if (NIVEL && monto > NIVEL.montoMax) return mensaje("msg-reto", "Con tu nivel " + NIVEL.nivel + " puedes apostar hasta " + NIVEL.montoMax + (NIVEL.montoMax === 1 ? " moneda" : " monedas") + ". Recarga para subir de nivel");
   if (monto > saldo) return mensaje("msg-reto", "No tienes créditos suficientes");
   let cuando = null;
   if (modoReto === "programado") {
@@ -1021,7 +1056,8 @@ function pintarPartidas() {
     if (vigente && r.creadorUid !== uid) {
       if (vistaPartidas !== "azar" && r.modo !== vistaPartidas) return;
       if (q && !(r.creadorNombre + " " + r.creadorTag).toLowerCase().includes(q)) return;
-      ab.appendChild(fila(r.creadorNombre, r.creadorTag, r.monto + " · " + cuandoTxt(r), "Aceptar", r.monto > saldo, () => accionReto("aceptarReto", r.id)));
+      const sinNivel = Boolean(NIVEL && r.monto > NIVEL.montoMax);
+      ab.appendChild(fila(r.creadorNombre, r.creadorTag, r.monto + (sinNivel ? " 🔒 nivel " + (MONTOS.indexOf(r.monto) + 1) : "") + " · " + cuandoTxt(r), "Aceptar", r.monto > saldo || sinNivel, () => accionReto("aceptarReto", r.id)));
     } else if (r.creadorUid === uid || r.rivalUid === uid) {
       const soyCreador = r.creadorUid === uid;
       const reciente = ahora - (r.terminadoEn || r.creadoEn) < 48 * 3600 * 1000;
@@ -1067,7 +1103,7 @@ $("btn-azar").onclick = () => {
   const lista = $("pa-azar"); lista.innerHTML = "";
   if (!auth.currentUser) return;
   const uid = auth.currentUser.uid, ahora = Date.now(), monto = Number($("pa-monto").value) || 0;
-  const cand = retos.filter((r) => r.estado === "abierto" && r.vence > ahora && r.creadorUid !== uid && r.monto <= saldo && (!monto || r.monto === monto));
+  const cand = retos.filter((r) => r.estado === "abierto" && r.vence > ahora && r.creadorUid !== uid && r.monto <= saldo && (!NIVEL || r.monto <= NIVEL.montoMax) && (!monto || r.monto === monto));
   if (!cand.length) return mensaje("msg-azar", monto ? "No hay retos de " + monto + " ahora. Prueba otro monto o publica el tuyo" : "No hay retos que puedas pagar ahora. Publica el tuyo y espera rival");
   const ya = cand.filter((r) => r.modo === "ya");
   const pool = ya.length ? ya : cand;
