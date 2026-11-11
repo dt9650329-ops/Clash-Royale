@@ -240,6 +240,7 @@ input:focus{border-color:var(--cian)}
     <p class="suave">Es tu primera vez aquí. Confirma tus datos para crear tu perfil.</p>
     <form id="form-registro" novalidate>
       <label>Nombre<input id="r-nombre" autocomplete="name"></label>
+      <p class="suave">Cuando vincules tu tag, tu nombre pasará a ser el de tu cuenta de Clash Royale.</p>
       <label>Correo<input id="r-correo" type="email" readonly></label>
       <label>Teléfono<input id="r-telefono" type="tel" autocomplete="tel" placeholder="3001234567"></label>
       <p id="msg-registro" class="msg" role="status"></p>
@@ -327,9 +328,9 @@ input:focus{border-color:var(--cian)}
       <p class="copas" id="p-creditos">0</p>
       <h2 style="margin-top:20px">Tienda de monedas</h2>
       <div class="tienda" id="tienda">
-        <div class="paquete"><div><div class="pq-cant">10 créditos</div><div class="pq-precio">= $5.000 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-paquete="p10" data-metodo="Nequi">Nequi</button><button type="button" class="primario" data-paquete="p10" data-metodo="PayPal">PayPal</button><button type="button" class="primario" data-paquete="p10" data-metodo="Binance">Binance</button></div></div>
-        <div class="paquete"><div><div class="pq-cant">25 créditos</div><div class="pq-precio">= $12.500 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-paquete="p25" data-metodo="Nequi">Nequi</button><button type="button" class="primario" data-paquete="p25" data-metodo="PayPal">PayPal</button><button type="button" class="primario" data-paquete="p25" data-metodo="Binance">Binance</button></div></div>
-        <div class="paquete"><div><div class="pq-cant">50 créditos</div><div class="pq-precio">= $25.000 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-paquete="p50" data-metodo="Nequi">Nequi</button><button type="button" class="primario" data-paquete="p50" data-metodo="PayPal">PayPal</button><button type="button" class="primario" data-paquete="p50" data-metodo="Binance">Binance</button></div></div>
+        <div class="paquete"><div><div class="pq-cant">10 créditos</div><div class="pq-precio">= $5.500 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-paquete="p10" data-metodo="Nequi">Nequi</button><button type="button" class="primario" data-paquete="p10" data-metodo="PayPal">PayPal</button><button type="button" class="primario" data-paquete="p10" data-metodo="Binance">Binance</button></div></div>
+        <div class="paquete"><div><div class="pq-cant">25 créditos</div><div class="pq-precio">= $13.750 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-paquete="p25" data-metodo="Nequi">Nequi</button><button type="button" class="primario" data-paquete="p25" data-metodo="PayPal">PayPal</button><button type="button" class="primario" data-paquete="p25" data-metodo="Binance">Binance</button></div></div>
+        <div class="paquete"><div><div class="pq-cant">50 créditos</div><div class="pq-precio">= $27.500 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-paquete="p50" data-metodo="Nequi">Nequi</button><button type="button" class="primario" data-paquete="p50" data-metodo="PayPal">PayPal</button><button type="button" class="primario" data-paquete="p50" data-metodo="Binance">Binance</button></div></div>
       </div>
       <p id="msg-compra" class="msg" role="status"></p>
       <h2 style="margin-top:20px">Mis compras</h2>
@@ -386,9 +387,9 @@ input:focus{border-color:var(--cian)}
         <div class="cuerpo">
           <p>Los créditos son lo que se apuesta en cada partida. Los consigues en la tienda de monedas:</p>
           <ul>
-            <li>10 créditos = $5.000 COP</li>
-            <li>25 créditos = $12.500 COP</li>
-            <li>50 créditos = $25.000 COP</li>
+            <li>10 créditos = $5.500 COP</li>
+            <li>25 créditos = $13.750 COP</li>
+            <li>50 créditos = $27.500 COP</li>
           </ul>
           <ol>
             <li>En <b>Créditos</b> elige el paquete y toca cómo quieres pagar (<b>Nequi</b>, <b>PayPal</b> o <b>Binance</b>): se abre WhatsApp con el mensaje listo para enviarle al administrador.</li>
@@ -396,7 +397,7 @@ input:focus{border-color:var(--cian)}
             <li>Puedes ver el estado en <b>Mis compras</b>: pendiente, aprobada o rechazada. Cuando se aprueba, tu saldo sube solo.</li>
           </ol>
           <p><b>Retirar:</b> en <b>Créditos</b>, dentro de «Retirar créditos», elige 10, 25 o 50 créditos, escribe dónde quieres recibir el pago y confirma. Tus créditos se descuentan al pedirlo y el administrador te envía el pago. Si lo rechaza, te los devuelve. Puedes ver el estado en <b>Mis retiros</b>.</p>
-          <p><b>Comisiones:</b> no se cobra comisión al comprar créditos; solo se cobra el 20% en cada retiro. Por ejemplo, si retiras 25 créditos ($12.500 COP) recibes $10.000 COP. En las partidas no se cobra comisión: lo que ganas es tuyo.</p>
+          <p><b>Comisiones:</b> el precio de compra ya incluye los costos de comisión del pago; además se cobra el 20% en cada retiro. Por ejemplo, si retiras 25 créditos ($12.500 COP) recibes $10.000 COP. En las partidas no se cobra comisión: lo que ganas es tuyo.</p>
           <button type="button" class="ir" data-ir="creditos">Ir a Créditos</button>
         </div>
       </details>
@@ -807,13 +808,21 @@ async function traerClash(tag) {
   }
 }
 
+let nombreIgualado = "";
 async function cargarClash(tag) {
   mensaje("msg-clash", "");
   try {
     const d = await traerClash(tag);
     $("c-copas").textContent = d.copas;
     $("c-nombre").textContent = d.nombre + " (" + d.tag + ")";
-    if (auth.currentUser) db.ref("jugadores/" + auth.currentUser.uid + "/nombreClash").set(d.nombre).catch((e) => console.error(e));
+    if (auth.currentUser) {
+      db.ref("jugadores/" + auth.currentUser.uid + "/nombreClash").set(d.nombre).catch((e) => console.error(e));
+      // Cuentas viejas (o si cambió su nombre en el juego): el nombre del perfil se iguala al de Clash Royale
+      if (d.nombre && perfilActual && perfilActual.nombre !== d.nombre && nombreIgualado !== d.nombre) {
+        nombreIgualado = d.nombre;
+        db.ref("users/" + auth.currentUser.uid + "/nombre").set(d.nombre).catch((e) => { nombreIgualado = ""; console.error(e); });
+      }
+    }
     $("c-mejor").textContent = d.mejoresCopas;
     $("c-nivel").textContent = d.nivel;
     $("c-record").textContent = d.victorias + " / " + d.derrotas;
@@ -831,7 +840,9 @@ $("form-tag").addEventListener("submit", async (ev) => {
   $("btn-tag").disabled = true;
   try {
     const d = await traerClash(tag);
-    await db.ref("users/" + auth.currentUser.uid + "/tag").set(d.tag);
+    // El nombre del perfil pasa a ser el de Clash Royale (así es el mismo en la tabla, el panel admin y los retos)
+    await db.ref("users/" + auth.currentUser.uid).update({ tag: d.tag, nombre: d.nombre });
+    db.ref("jugadores/" + auth.currentUser.uid + "/nombreClash").set(d.nombre).catch((e) => console.error(e));
   } catch (e) {
     mensaje("msg-tag", e.message);
   } finally {
@@ -1132,7 +1143,8 @@ $("form-retiro").addEventListener("submit", async (ev) => {
 
 // Tienda de monedas: el jugador solicita un paquete y el administrador confirma el pago y lo acredita.
 // Precios en pesos colombianos (COP). Deben ser los mismos que el PAQUETES del servidor (functions/index.js).
-const PAQUETES = { p10: { creditos: 10, pesos: 5000 }, p25: { creditos: 25, pesos: 12500 }, p50: { creditos: 50, pesos: 25000 } };
+// pesos = valor del paquete (base del retiro). precio = lo que se paga al comprar (+10% por comisiones de pago).
+const PAQUETES = { p10: { creditos: 10, pesos: 5000, precio: 5500 }, p25: { creditos: 25, pesos: 12500, precio: 13750 }, p50: { creditos: 50, pesos: 25000, precio: 27500 } };
 const ESTADO_COMPRA = { pendiente: "Pendiente de confirmación", procesando: "Acreditando…", aprobada: "Aprobada ✓", rechazada: "Rechazada" };
 let comprasCargando = false;
 async function cargarCompras() {
@@ -1150,10 +1162,10 @@ const WHATSAPP_PAGOS = "573150522339";   // WhatsApp del administrador (pagos)
 document.querySelectorAll("#tienda [data-paquete]").forEach((b) => {
   b.onclick = async () => {
     const p = PAQUETES[b.dataset.paquete], metodo = b.dataset.metodo || "";
-    if (!p || !confirm("¿Comprar " + p.creditos + " créditos por " + cop(p.pesos) + " con " + metodo + "?\n\nSe abrirá WhatsApp para coordinar el pago con el administrador.")) return;
+    if (!p || !confirm("¿Comprar " + p.creditos + " créditos por " + cop(p.precio) + " con " + metodo + "?\n\nSe abrirá WhatsApp para coordinar el pago con el administrador.")) return;
     // WhatsApp se abre ya, en el mismo toque (si se espera a la red, el navegador del celular puede bloquearlo)
     const u = auth.currentUser;
-    const texto = "Hola, quiero comprar " + p.creditos + " créditos (" + cop(p.pesos) + ") en Legión Real. Pago con " + metodo + "." + (u && u.email ? "\nMi cuenta: " + u.email : "");
+    const texto = "Hola, quiero comprar " + p.creditos + " créditos (" + cop(p.precio) + ") en Legión Real. Pago con " + metodo + "." + (u && u.email ? "\nMi cuenta: " + u.email : "");
     const url = "https://wa.me/" + WHATSAPP_PAGOS + "?text=" + encodeURIComponent(texto);
     const ventana = window.open(url, "_blank");
     const botones = document.querySelectorAll("#tienda [data-paquete]");
