@@ -353,10 +353,10 @@ input:focus{border-color:var(--cian)}
       <h2 style="margin-top:20px">Retirar créditos</h2>
       <p class="suave">Retiras tus créditos al mismo valor, menos el 20% de comisión, o los cambias por una tarjeta de Google Play. Se descuentan al pedir el retiro; el administrador te envía el pago y lo marca como pagado. Si lo rechaza, te los devuelve.</p>
       <div class="tienda" id="retiros">
-        <div class="paquete"><div><div class="pq-cant">10 créditos = $5.000 COP</div><div class="pq-precio">Recibes $4.000 COP</div><div class="pq-nota">Comisión 20%: $1.000 COP</div></div><button type="button" class="secundario" data-retiro="p10">Retirar</button></div>
-        <div class="paquete"><div><div class="pq-cant">25 créditos = $12.500 COP</div><div class="pq-precio">Recibes $10.000 COP</div><div class="pq-nota">Comisión 20%: $2.500 COP</div></div><button type="button" class="secundario" data-retiro="p25">Retirar</button></div>
-        <div class="paquete"><div><div class="pq-cant">50 créditos = $25.000 COP</div><div class="pq-precio">Recibes $20.000 COP</div><div class="pq-nota">Comisión 20%: $5.000 COP</div></div><button type="button" class="secundario" data-retiro="p50">Retirar</button></div>
-        <div class="paquete"><div><div class="pq-cant">20 créditos = Tarjeta Google Play</div><div class="pq-precio" id="gp-valor">Valor: $2.00 USD</div><div class="pq-nota">El valor en dólares se convierte a la moneda de tu país (México, Perú, Chile o Colombia)</div></div><button type="button" class="secundario" data-retiro="googleplay">Retirar</button></div>
+        <div class="paquete"><div><div class="pq-cant">10 créditos = $5.000 COP</div><div class="pq-precio">Recibes $4.000 COP</div><div class="pq-nota">Comisión 20%: $1.000 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-retiro="p10" data-metodo="nequi">Nequi</button><button type="button" class="primario" data-retiro="p10" data-metodo="paypal">PayPal</button><button type="button" class="primario" data-retiro="p10" data-metodo="binance">Binance</button></div></div>
+        <div class="paquete"><div><div class="pq-cant">25 créditos = $12.500 COP</div><div class="pq-precio">Recibes $10.000 COP</div><div class="pq-nota">Comisión 20%: $2.500 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-retiro="p25" data-metodo="nequi">Nequi</button><button type="button" class="primario" data-retiro="p25" data-metodo="paypal">PayPal</button><button type="button" class="primario" data-retiro="p25" data-metodo="binance">Binance</button></div></div>
+        <div class="paquete"><div><div class="pq-cant">50 créditos = $25.000 COP</div><div class="pq-precio">Recibes $20.000 COP</div><div class="pq-nota">Comisión 20%: $5.000 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-retiro="p50" data-metodo="nequi">Nequi</button><button type="button" class="primario" data-retiro="p50" data-metodo="paypal">PayPal</button><button type="button" class="primario" data-retiro="p50" data-metodo="binance">Binance</button></div></div>
+        <div class="paquete"><div><div class="pq-cant">20 créditos = Tarjeta Google Play</div><div class="pq-precio" id="gp-valor">Valor: $2.00 USD</div><div class="pq-nota">El valor en dólares se convierte a la moneda de tu país (México, Perú, Chile o Colombia)</div></div><div class="pq-pagos"><button type="button" class="primario" data-retiro="googleplay" data-metodo="googleplay">Retirar con tarjeta Google Play</button></div></div>
       </div>
       <p id="msg-retiro" class="msg" role="status"></p>
       <h2 style="margin-top:20px">Mis retiros</h2>
@@ -616,10 +616,9 @@ input:focus{border-color:var(--cian)}
   <p class="copas" id="dr-cant">0</p>
   <p class="etiqueta" id="dr-recibes"></p>
   <form id="form-retiro" novalidate>
-    <label><span id="dr-etiqueta">¿Dónde quieres recibir el pago?</span>
-      <input id="dr-destino" maxlength="120" placeholder="Ej: Nequi 3001234567" autocomplete="off">
-    </label>
-    <p class="suave" style="font-size:.85em;margin-bottom:10px" id="dr-nota">Escribe el medio y los datos exactos. Tus créditos se descuentan ahora y se devuelven si el administrador rechaza el retiro.</p>
+    <p class="etiqueta" id="dr-metodo" style="margin-bottom:6px"></p>
+    <div id="dr-campos"></div>
+    <p class="suave" style="font-size:.85em;margin-bottom:10px" id="dr-nota"></p>
     <p id="msg-dretiro" class="msg" role="status"></p>
     <button type="submit" class="primario" id="dr-ok">Confirmar retiro</button>
     <button type="button" class="secundario cancelar" id="dr-no">Cancelar</button>
@@ -1137,20 +1136,23 @@ async function cargarRetiros() {
   try {
     const lista = (await fnReto("misRetiros")).data || [];
     const ul = $("pa-retiros"); ul.innerHTML = "";
-    lista.forEach((c) => ul.appendChild(fila(c.creditos + " créditos", ESTADO_RETIRO[c.estado] || c.estado, (c.metodo === "googleplay" ? "Tarjeta Google Play " + usd2(c.recibeUsd) : "Recibes " + (c.recibePesos != null ? cop(c.recibePesos) : usd2(c.recibeUsd))), "", false, null)));
+    lista.forEach((c) => ul.appendChild(fila(c.creditos + " créditos", ESTADO_RETIRO[c.estado] || c.estado, (c.metodo === "googleplay" ? "Tarjeta Google Play " + usd2(c.recibeUsd) : "Recibes " + (c.recibePesos != null ? cop(c.recibePesos) : usd2(c.recibeUsd)) + (c.metodo && NOMBRE_METODO[c.metodo] ? " · " + NOMBRE_METODO[c.metodo] : "")), "", false, null)));
     $("retiros-vacio").classList.toggle("oculto", lista.length > 0);
   } catch (e) { console.warn("misRetiros", e); }
   retirosCargando = false;
 }
 
 // Botones de retiro activos/bloqueados y valor de la tarjeta Google Play (lo decide el admin)
-let RETIROS_HAB = { p10: true, p25: true, p50: true, googleplay: false };
+let RETIROS_HAB = { p10: true, p25: true, p50: true, nequi: true, paypal: true, binance: true, googleplay: false };
 let GP = { creditos: 20, usd: 2 };
+const NOMBRE_METODO = { nequi: "Nequi", paypal: "PayPal", binance: "Binance", googleplay: "Google Play" };
 function pintarBotonesRetiro() {
   document.querySelectorAll("#retiros [data-retiro]").forEach((b) => {
-    const on = RETIROS_HAB[b.dataset.retiro] !== false && (b.dataset.retiro !== "googleplay" || RETIROS_HAB.googleplay === true);
+    const m = b.dataset.metodo;
+    const on = m === "googleplay" ? RETIROS_HAB.googleplay === true : (RETIROS_HAB[b.dataset.retiro] !== false && RETIROS_HAB[m] !== false);
     b.disabled = !on;
-    b.textContent = on ? "Retirar" : "🔒 Bloqueado";
+    if (m === "googleplay") b.textContent = on ? "Retirar con tarjeta Google Play" : "🔒 Bloqueado";
+    else b.textContent = (on ? "" : "🔒 ") + NOMBRE_METODO[m];
     b.style.opacity = on ? "" : ".5";
   });
   $("gp-valor").textContent = "Valor: " + usd2(GP.usd);
@@ -1166,28 +1168,66 @@ pintarBotonesRetiro();
 document.addEventListener("visibilitychange", () => { if (!document.hidden && auth.currentUser) cargarConfigRetiros(); });
 setInterval(() => { if (auth.currentUser && !document.hidden) cargarConfigRetiros(); }, 60000);
 
+// Formulario de datos que necesita el administrador para pagar, según el medio elegido
+const CAMPOS_RETIRO = {
+  nequi: [
+    { k: "numero", etiqueta: "Número de Nequi", ph: "3001234567", type: "tel", modo: "numeric", max: 15 },
+    { k: "titular", etiqueta: "Nombre completo del titular de la cuenta", ph: "Como aparece en Nequi", max: 60 },
+  ],
+  paypal: [
+    { k: "correo", etiqueta: "Correo de tu cuenta PayPal", ph: "micorreo@gmail.com", type: "email", max: 80 },
+    { k: "titular", etiqueta: "Nombre completo del titular de la cuenta", ph: "Como aparece en PayPal", max: 60 },
+  ],
+  binance: [
+    { k: "binanceId", etiqueta: "Binance Pay ID (o correo de tu cuenta Binance)", ph: "Ej: 123456789", max: 60 },
+    { k: "titular", etiqueta: "Nombre completo del titular de la cuenta", ph: "Como aparece en Binance", max: 60 },
+  ],
+  googleplay: [
+    { k: "pais", etiqueta: "País de tu cuenta de Google Play", opciones: ["México", "Perú", "Chile", "Colombia"] },
+    { k: "correo", etiqueta: "Correo de tu cuenta de Google Play", ph: "micorreo@gmail.com", type: "email", max: 80 },
+  ],
+};
+let metodoElegido = null;
+function pintarCamposRetiro(metodo) {
+  const caja = $("dr-campos"); caja.innerHTML = "";
+  CAMPOS_RETIRO[metodo].forEach((c) => {
+    const lab = document.createElement("label");
+    lab.append(c.etiqueta);
+    let el;
+    if (c.opciones) {
+      el = document.createElement("select");
+      const o0 = document.createElement("option"); o0.value = ""; o0.textContent = "Elige un país"; el.appendChild(o0);
+      c.opciones.forEach((p) => { const o = document.createElement("option"); o.value = p; o.textContent = p; el.appendChild(o); });
+    } else {
+      el = document.createElement("input");
+      el.type = c.type || "text"; el.maxLength = c.max; el.placeholder = c.ph || ""; el.autocomplete = "off";
+      if (c.modo) el.inputMode = c.modo;
+    }
+    el.id = "drc-" + c.k;
+    lab.appendChild(el);
+    caja.appendChild(lab);
+  });
+}
+
 document.querySelectorAll("#retiros [data-retiro]").forEach((b) => {
   b.onclick = () => {
-    const esGP = b.dataset.retiro === "googleplay";
+    const metodo = b.dataset.metodo, esGP = metodo === "googleplay";
     const p = esGP ? { creditos: GP.creditos } : PAQUETES[b.dataset.retiro];
     if (!p) return;
     mensaje("msg-retiro", "");
     if (saldo < p.creditos) return mensaje("msg-retiro", "Necesitas " + p.creditos + " créditos para este retiro y tienes " + saldo.toLocaleString("es-CO"));
-    retiroElegido = b.dataset.retiro;
+    retiroElegido = b.dataset.retiro; metodoElegido = metodo;
     $("dr-cant").textContent = p.creditos + " créditos";
+    $("dr-metodo").textContent = "Método de pago: " + NOMBRE_METODO[metodo];
     if (esGP) {
       $("dr-recibes").textContent = "Recibes una tarjeta Google Play de " + usd2(GP.usd) + ", convertida a la moneda de tu país";
-      $("dr-etiqueta").textContent = "País de tu cuenta de Google Play y tu correo";
-      $("dr-destino").placeholder = "Ej: Colombia, micorreo@gmail.com";
-      $("dr-nota").textContent = "Escribe el país de tu cuenta de Google Play (México, Perú, Chile o Colombia) y el correo de esa cuenta. El valor en dólares se convierte a la moneda de ese país. Tus créditos se descuentan ahora y se devuelven si el administrador rechaza el retiro.";
+      $("dr-nota").textContent = "El valor en dólares se convierte a la moneda del país de tu cuenta (México, Perú, Chile o Colombia). Tus créditos se descuentan ahora y se devuelven si el administrador rechaza el retiro.";
     } else {
       const comision = Math.round(p.pesos * COMISION_RETIRO / 100);
-      $("dr-recibes").textContent = "Recibes " + cop(p.pesos - comision) + " (comisión " + COMISION_RETIRO + "%: " + cop(comision) + ")";
-      $("dr-etiqueta").textContent = "¿Dónde quieres recibir el pago?";
-      $("dr-destino").placeholder = "Ej: Nequi 3001234567";
-      $("dr-nota").textContent = "Escribe el medio y los datos exactos. Tus créditos se descuentan ahora y se devuelven si el administrador rechaza el retiro.";
+      $("dr-recibes").textContent = (metodo === "nequi" ? "Recibes " : "Recibes el equivalente a ") + cop(p.pesos - comision) + " (comisión " + COMISION_RETIRO + "%: " + cop(comision) + ")";
+      $("dr-nota").textContent = "Revisa bien los datos: el pago se envía exactamente a esa cuenta. Tus créditos se descuentan ahora y se devuelven si el administrador rechaza el retiro.";
     }
-    $("dr-destino").value = "";
+    pintarCamposRetiro(metodo);
     mensaje("msg-dretiro", "");
     $("dr-ok").disabled = false;
     $("dlg-retiro").showModal();
@@ -1197,11 +1237,15 @@ $("dr-no").onclick = () => $("dlg-retiro").close();
 $("form-retiro").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   mensaje("msg-dretiro", "");
-  const destino = $("dr-destino").value.replace(/\s+/g, " ").trim();
-  if (destino.length < 5) return mensaje("msg-dretiro", "Escribe dónde quieres recibir el pago (medio y datos)");
+  const datos = {};
+  for (const c of CAMPOS_RETIRO[metodoElegido]) {
+    const v = ($("drc-" + c.k).value || "").replace(/\s+/g, " ").trim();
+    if (!v) return mensaje("msg-dretiro", "Completa: " + c.etiqueta);
+    datos[c.k] = v;
+  }
   $("dr-ok").disabled = true;
   try {
-    await fnReto("solicitarRetiro", { paquete: retiroElegido, destino });
+    await fnReto("solicitarRetiro", { paquete: retiroElegido, metodo: metodoElegido, datos });
     $("dlg-retiro").close();
     mensaje("msg-retiro", "Retiro solicitado. El administrador te enviará el pago y lo verás aquí como pagado", true);
     cargarRetiros();
