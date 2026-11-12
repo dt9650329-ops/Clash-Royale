@@ -281,6 +281,7 @@ input:focus{border-color:var(--cian)}
           <button type="button" data-sec="mega">Mega Legión</button>
           <button type="button" data-sec="torneos">Torneos</button>
           <button type="button" data-sec="dinamicas">Dinámicas</button>
+          <button type="button" data-sec="desafios">Desafíos</button>
           <button type="button" data-sec="historial">Historial</button>
           <button type="button" data-sec="creditos">Créditos</button>
           <button type="button" data-sec="guia">Cómo jugar</button>
@@ -616,6 +617,19 @@ input:focus{border-color:var(--cian)}
     </div>
     </div>
 
+    <div class="seccion" data-sec="desafios">
+    <div class="panel">
+      <div class="barra">
+        <h2>Desafíos</h2>
+        <button type="button" id="btn-desafios" class="secundario mini">Actualizar mi avance</button>
+      </div>
+      <p class="suave">Inscríbete y cumple la meta en Clash Royale: la página revisa tus batallas de escalera (subida de copas) y te carga el premio sola. Solo cuentan las batallas que juegues después de inscribirte.</p>
+      <p id="msg-desafios" class="msg" role="status"></p>
+      <ul id="ds-lista" class="din-lista"></ul>
+      <p id="ds-vacio" class="suave oculto">Por ahora no hay desafíos. Vuelve pronto.</p>
+    </div>
+    </div>
+
     <div class="seccion" data-sec="historial">
     <div class="panel">
       <div class="barra">
@@ -754,7 +768,7 @@ $("btn-google").onclick = async () => {
 $("btn-salir").onclick = () => auth.signOut();
 
 // --- Menú hamburguesa y secciones ---
-const SECCIONES = ["perfil", "clash", "partida", "tabla", "mega", "torneos", "dinamicas", "historial", "creditos", "guia"];
+const SECCIONES = ["perfil", "clash", "partida", "tabla", "mega", "torneos", "dinamicas", "desafios", "historial", "creditos", "guia"];
 
 function abrirMenu(abrir) {
   $("menu").classList.toggle("abierto", abrir);
@@ -778,6 +792,7 @@ function irA(sec) {
   if (sec === "mega") cargarMega();
   if (sec === "torneos" || sec === "tabla") cargarTorneosPase();   // la Tabla también muestra los torneos
   if (sec === "dinamicas") cargarDinamicas();
+  if (sec === "desafios") cargarDesafios(true);
 }
 
 $("btn-menu").onclick = () => abrirMenu(!$("menu").classList.contains("abierto"));
@@ -1742,6 +1757,61 @@ function pintarDinamicas(lista) {
     ul.appendChild(li);
   });
 }
+// ---------- Desafíos de racha ----------
+const errDesafio = (e) => ((e && String(e.code || "").startsWith("functions/") && !["functions/internal", "functions/unknown"].includes(e.code)) ? e.message : "No pudimos completar la acción. Intenta de nuevo");
+function elDs(tag, texto, clase) { const e = document.createElement(tag); if (texto != null) e.textContent = texto; if (clase) e.className = clase; return e; }
+function tarjetaDesafio(d) {
+  const li = elDs("li", null, "din");
+  li.appendChild(elDs("strong", d.titulo));
+  if (d.descripcion) li.appendChild(elDs("p", d.descripcion, "suave"));
+  li.appendChild(elDs("p", "Meta: " + d.victorias + " victoria" + (d.victorias === 1 ? "" : "s") + " seguida" + (d.victorias === 1 ? "" : "s") + " en subida de copas", "din-pregunta"));
+  li.appendChild(elDs("p", "Premio: " + d.premio.toLocaleString("es-CO") + " créditos · " + (d.inscripcion > 0 ? "Inscripción: " + d.inscripcion.toLocaleString("es-CO") + " créditos" : "Inscripción gratis"), "din-premio"));
+  li.appendChild(elDs("p", "Ganadores: " + d.ganadoresN + " de " + d.tope + (d.estado === "abierto" ? " · Cierra: " + new Date(d.cierra).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) : ""), "suave"));
+  if (d.mi) {
+    if (d.mi.estado === "gano") li.appendChild(elDs("p", "🎉 ¡Cumpliste el desafío! Ganaste " + d.premio.toLocaleString("es-CO") + " créditos" + (d.mi.pagado ? ". Ya están en tu cuenta." : ". Se están cargando…"), "din-premio"));
+    else if (d.mi.estado === "sin_cupo") li.appendChild(elDs("p", "Llegaste a la meta, pero el tope de ganadores ya se había completado.", "suave"));
+    else {
+      li.appendChild(elDs("p", "Tu racha: " + d.mi.racha + " de " + d.victorias + " · Mejor racha: " + d.mi.mejor, "din-premio"));
+      const barra = elDs("div"); barra.style.cssText = "height:10px;border-radius:999px;background:var(--linea);overflow:hidden";
+      const relleno = elDs("div"); relleno.style.cssText = "height:100%;background:var(--oro);width:" + Math.min(100, Math.round(d.mi.racha / d.victorias * 100)) + "%";
+      barra.appendChild(relleno); li.appendChild(barra);
+      li.appendChild(elDs("p", d.estado === "abierto" ? "Estás inscrito. Juega batallas de escalera: una derrota reinicia la racha." : "Este desafío terminó.", "suave"));
+    }
+  } else if (d.estado === "abierto") {
+    const lleno = d.ganadoresN >= d.tope;
+    const b = elDs("button", lleno ? "Tope completo" : (d.inscripcion > 0 ? "Inscribirme (" + d.inscripcion.toLocaleString("es-CO") + " créditos)" : "Inscribirme gratis"), "primario");
+    b.type = "button"; b.disabled = lleno;
+    b.onclick = async () => {
+      if (!confirm(d.inscripcion > 0 ? "¿Inscribirte por " + d.inscripcion + " créditos? No se devuelven si no completas la meta." : "¿Inscribirte en este desafío?")) return;
+      b.disabled = true;
+      try {
+        await functions.httpsCallable("desafioInscribir")({ id: d.id });
+        mensaje("msg-desafios", "¡Inscrito! Desde ahora cuentan tus batallas de escalera.", true);
+        cargarDesafios(true);
+      } catch (e) { mensaje("msg-desafios", errDesafio(e)); b.disabled = false; }
+    };
+    li.appendChild(b);
+  } else {
+    li.appendChild(elDs("p", "Este desafío ya terminó.", "suave"));
+  }
+  return li;
+}
+async function cargarDesafios(conservar) {
+  if (!auth.currentUser) return;
+  try {
+    const lista = (await functions.httpsCallable("desafiosLista")()).data || [];
+    if (!conservar) mensaje("msg-desafios", "");
+    const ul = $("ds-lista"); ul.innerHTML = "";
+    lista.forEach((d) => ul.appendChild(tarjetaDesafio(d)));
+    $("ds-vacio").classList.toggle("oculto", lista.length > 0);
+  } catch (e) { mensaje("msg-desafios", errDesafio(e)); }
+}
+$("btn-desafios").onclick = async () => {
+  mensaje("msg-desafios", "Revisando tus batallas…", true);
+  try { await functions.httpsCallable("desafiosRevisar")(); } catch (e) { /* si no se pudo revisar, igual se muestra lo último */ }
+  await cargarDesafios(false);
+};
+
 async function cargarDinamicas(conservarMensaje) {
   if (!auth.currentUser) return;
   try {
