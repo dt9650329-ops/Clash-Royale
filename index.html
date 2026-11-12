@@ -96,6 +96,12 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
 .xp-relleno{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--oro),#FFE08A);transition:width .6s ease}
 .historial li{align-items:center}
 .historial li .mini{flex:none}
+.din-lista{list-style:none;margin:0;padding:0}
+.din{display:flex;flex-direction:column;gap:6px;border:2px solid var(--linea);border-radius:12px;padding:14px;margin:0 0 14px}
+.din-premio{color:var(--oro);font-weight:700}
+.din-pregunta{margin:4px 0 0}
+.din-ops{display:flex;flex-direction:column;gap:8px;margin:8px 0}
+.din-ops .chip{text-align:left;border-radius:12px}
 
 /* ---- Legión Real: imágenes y acabado visual ---- */
 :root{
@@ -274,6 +280,7 @@ input:focus{border-color:var(--cian)}
           <button type="button" data-sec="tabla">Tabla de posiciones</button>
           <button type="button" data-sec="mega">Mega Legión</button>
           <button type="button" data-sec="torneos">Torneos</button>
+          <button type="button" data-sec="dinamicas">Dinámicas</button>
           <button type="button" data-sec="historial">Historial</button>
           <button type="button" data-sec="creditos">Créditos</button>
           <button type="button" data-sec="guia">Cómo jugar</button>
@@ -339,7 +346,7 @@ input:focus{border-color:var(--cian)}
       <h2>Créditos</h2>
       <p class="copas" id="p-creditos">0</p>
       <h2 style="margin-top:20px">Tienda de monedas</h2>
-      <p class="suave" style="margin:0 0 12px">Cada moneda que recargas te da <b>1 XP</b> y sube tu nivel: con más nivel puedes apostar montos más altos.</p>
+      <p class="suave" style="margin:0 0 12px">Cada moneda que recargas te da <b>1 XP</b> y sube tu nivel.</p>
       <div class="tienda" id="tienda">
         <div class="paquete"><div><div class="pq-cant">10 créditos</div><div class="pq-precio">= $5.500 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-paquete="p10" data-metodo="Nequi">Nequi</button><button type="button" class="primario" data-paquete="p10" data-metodo="PayPal">PayPal</button><button type="button" class="primario" data-paquete="p10" data-metodo="Binance">Binance</button></div></div>
         <div class="paquete"><div><div class="pq-cant">25 créditos</div><div class="pq-precio">= $13.750 COP</div></div><div class="pq-pagos"><button type="button" class="primario" data-paquete="p25" data-metodo="Nequi">Nequi</button><button type="button" class="primario" data-paquete="p25" data-metodo="PayPal">PayPal</button><button type="button" class="primario" data-paquete="p25" data-metodo="Binance">Binance</button></div></div>
@@ -596,6 +603,19 @@ input:focus{border-color:var(--cian)}
     </div>
     </div>
 
+    <div class="seccion" data-sec="dinamicas">
+    <div class="panel">
+      <div class="barra">
+        <h2>Dinámicas</h2>
+        <button type="button" id="btn-dinamicas" class="secundario mini">Actualizar</button>
+      </div>
+      <p class="suave">Responde las encuestas y gana monedas. Cada encuesta se puede responder una sola vez.</p>
+      <p id="msg-dinamicas" class="msg" role="status"></p>
+      <ul id="din-lista" class="din-lista"></ul>
+      <p id="din-vacio" class="suave oculto">Por ahora no hay encuestas disponibles. Vuelve pronto.</p>
+    </div>
+    </div>
+
     <div class="seccion" data-sec="historial">
     <div class="panel">
       <div class="barra">
@@ -734,7 +754,7 @@ $("btn-google").onclick = async () => {
 $("btn-salir").onclick = () => auth.signOut();
 
 // --- Menú hamburguesa y secciones ---
-const SECCIONES = ["perfil", "clash", "partida", "tabla", "mega", "torneos", "historial", "creditos", "guia"];
+const SECCIONES = ["perfil", "clash", "partida", "tabla", "mega", "torneos", "dinamicas", "historial", "creditos", "guia"];
 
 function abrirMenu(abrir) {
   $("menu").classList.toggle("abierto", abrir);
@@ -757,6 +777,7 @@ function irA(sec) {
   if (sec === "creditos") { cargarCompras(); cargarRetiros(); }
   if (sec === "mega") cargarMega();
   if (sec === "torneos" || sec === "tabla") cargarTorneosPase();   // la Tabla también muestra los torneos
+  if (sec === "dinamicas") cargarDinamicas();
 }
 
 $("btn-menu").onclick = () => abrirMenu(!$("menu").classList.contains("abierto"));
@@ -951,21 +972,21 @@ const msgFn = (e) => (((e.code || "").startsWith("functions/") && !["functions/i
 const cuandoTxt = (r) => r.modo === "programado" ? new Date(r.cuando).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) : "Ya";
 
 let NIVEL = null;   // nivel y XP del jugador (lo manda el servidor junto con los montos)
-const montoMaxNivel = () => (NIVEL ? NIVEL.montoMax : MONTOS[0]);   // mientras carga, solo el monto más bajo
+const montoMaxNivel = () => Math.max(...MONTOS);   // el nivel ya no limita los montos
 function pintarNivel() {
   if (!NIVEL || !$("nv-num")) return;
   const n = NIVEL, base = n.niveles[n.nivel - 1] || 0;
   $("nv-num").textContent = "Nivel " + n.nivel;
-  $("nv-txt").textContent = "Puedes apostar hasta " + n.montoMax + (n.montoMax === 1 ? " moneda" : " monedas");
+  $("nv-txt").textContent = "";
   if (n.siguienteXp == null) {
     $("nv-barra").style.width = "100%";
     $("nv-xp").textContent = n.xp + " XP · nivel máximo";
-    $("nv-ayuda").textContent = "¡Ya desbloqueaste todos los montos de apuesta!";
+    $("nv-ayuda").textContent = "¡Ya estás en el nivel máximo!";
   } else {
     const pct = Math.max(0, Math.min(100, ((n.xp - base) / Math.max(1, n.siguienteXp - base)) * 100));
     $("nv-barra").style.width = pct + "%";
     $("nv-xp").textContent = n.xp + " / " + n.siguienteXp + " XP";
-    $("nv-ayuda").textContent = "Te faltan " + (n.siguienteXp - n.xp) + " XP para el nivel " + (n.nivel + 1) + ", donde podrás apostar " + n.siguienteMonto + " monedas. Cada moneda que recargas te da 1 XP.";
+    $("nv-ayuda").textContent = "Te faltan " + (n.siguienteXp - n.xp) + " XP para el nivel " + (n.nivel + 1) + ". Cada moneda que recargas te da 1 XP.";
   }
 }
 function pintarMontos() {
@@ -984,7 +1005,7 @@ async function cargarMontos() {
   try {
     const r = (await fnReto("montosApuesta")).data;
     MONTOS = r.opciones; MONTOS_ACTIVOS = r.activos;
-    if (r.nivel) { NIVEL = r; pintarNivel(); }
+    if (r.nivel) { NIVEL = r; NIVEL.montoMax = Math.max(...MONTOS); pintarNivel(); }
     const usables = MONTOS_ACTIVOS.filter((m) => m <= montoMaxNivel());
     if (!usables.includes(Number($("pa-monto").value))) $("pa-monto").value = usables.length ? usables[0] : MONTOS_ACTIVOS[0];
   } catch (e) { /* si falla, se queda con lo último que se supo */ }
@@ -1683,6 +1704,65 @@ async function actualizarTorneo(silencioso) {
   }
 }
 $("btn-actualizar").onclick = () => actualizarTorneo(false);
+
+// ---------- Dinámicas: encuestas que dan monedas ----------
+let dinSeleccion = {};   // id de la dinámica -> opción elegida (solo en pantalla)
+function errorDinamicas(e, porDefecto) {
+  if (e.code === "functions/not-found") return "Las dinámicas todavía no están disponibles.";
+  const propio = e.code && e.code.startsWith("functions/") && !["functions/internal", "functions/unknown"].includes(e.code);
+  return (propio ? e.message : porDefecto) + detalleError(e);
+}
+function pintarDinamicas(lista) {
+  const ul = $("din-lista"); ul.innerHTML = "";
+  $("din-vacio").classList.toggle("oculto", lista.length > 0);
+  lista.forEach((d) => {
+    const li = document.createElement("li"); li.className = "din";
+    const t = document.createElement("b"); t.textContent = d.titulo || "Encuesta";
+    const pr = document.createElement("span"); pr.className = "din-premio";
+    pr.textContent = "Gana " + d.premio + (d.premio === 1 ? " moneda" : " monedas") + (d.pago === "alcerrar" ? " cuando cierre la encuesta" : "");
+    const q = document.createElement("p"); q.className = "din-pregunta"; q.textContent = d.pregunta;
+    li.append(t, pr, q);
+    if (d.respondida) {
+      const ok = document.createElement("p"); ok.className = "msg ok"; ok.textContent = d.pago === "alcerrar" ? "✅ Ya respondiste. Recibirás tus monedas cuando cierre la encuesta." : "✅ Ya respondiste esta encuesta y recibiste tu premio.";
+      li.appendChild(ok);
+    } else {
+      const ops = document.createElement("div"); ops.className = "din-ops";
+      (d.opciones || []).forEach((txt, i) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "chip" + (dinSeleccion[d.id] === i ? " activa" : ""); b.textContent = txt;
+        b.onclick = () => { dinSeleccion[d.id] = i; pintarDinamicas(lista); };
+        ops.appendChild(b);
+      });
+      const env = document.createElement("button");
+      env.type = "button"; env.className = "primario"; env.textContent = "Responder y ganar";
+      env.disabled = dinSeleccion[d.id] == null;
+      env.onclick = () => responderDinamica(d, env);
+      li.append(ops, env);
+    }
+    ul.appendChild(li);
+  });
+}
+async function cargarDinamicas(conservarMensaje) {
+  if (!auth.currentUser) return;
+  try {
+    const r = (await functions.httpsCallable("listarDinamicas")()).data;
+    if (!conservarMensaje) mensaje("msg-dinamicas", "");
+    pintarDinamicas(r.dinamicas || []);
+  } catch (e) { mensaje("msg-dinamicas", errorDinamicas(e, "No pudimos cargar las dinámicas. Intenta de nuevo")); }
+}
+async function responderDinamica(d, btn) {
+  btn.disabled = true; mensaje("msg-dinamicas", "Enviando…", true);
+  try {
+    const r = (await functions.httpsCallable("responderDinamica")({ id: d.id, opcion: dinSeleccion[d.id] })).data;
+    delete dinSeleccion[d.id];
+    mensaje("msg-dinamicas", r.pendiente ? "¡Respuesta enviada! Recibirás " + r.premio + (r.premio === 1 ? " moneda" : " monedas") + " cuando cierre la encuesta." : "¡Listo! Ganaste " + r.premio + (r.premio === 1 ? " moneda." : " monedas."), true);
+    await cargarDinamicas(true);
+  } catch (e) {
+    mensaje("msg-dinamicas", errorDinamicas(e, "No pudimos enviar tu respuesta. Intenta de nuevo"));
+    btn.disabled = false;
+  }
+}
+$("btn-dinamicas").onclick = () => cargarDinamicas();
 
 // Copia pública del perfil (sin correo ni teléfono) para que aparezca en la tabla.
 function sincronizarPublico(p, user) {
