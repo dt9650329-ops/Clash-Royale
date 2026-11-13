@@ -1760,13 +1760,21 @@ function pintarDinamicas(lista) {
 // ---------- Eventos de racha ----------
 const errDesafio = (e) => ((e && String(e.code || "").startsWith("functions/") && !["functions/internal", "functions/unknown"].includes(e.code)) ? e.message : "No pudimos completar la acción. Intenta de nuevo");
 function elDs(tag, texto, clase) { const e = document.createElement(tag); if (texto != null) e.textContent = texto; if (clase) e.className = clase; return e; }
+function metaDesafioTexto(d) {
+  const n = d.victorias, veces = n === 1 ? "vez" : "veces", plural = n === 1 ? "" : "s";
+  if (d.tipo === "sin_perder") return n + " " + (n === 1 ? "partida" : "partidas") + " seguida" + plural + " sin perder";
+  if (d.tipo === "defensa") return n + " " + (n === 1 ? "partida" : "partidas") + " seguida" + plural + " sin que te tumben más de " + (d.toleranciaCoronas != null ? d.toleranciaCoronas : 0) + " corona" + ((d.toleranciaCoronas || 0) === 1 ? "" : "s");
+  if (d.tipo === "coronas") return n + " " + (n === 1 ? "partida" : "partidas") + " seguida" + plural + " tumbando al menos " + (d.coronasMinimas || 3) + " corona" + ((d.coronasMinimas || 3) === 1 ? "" : "s") + " cada una";
+  if (d.tipo === "cartas") return n + " " + (n === 1 ? "victoria" : "victorias") + " seguida" + plural + " usando: " + (d.cartas || []).join(", ");
+  return n + " victoria" + plural + " seguida" + plural + " en subida de copas";
+}
 function tarjetaDesafio(d) {
   const li = elDs("li", null, "din");
   li.appendChild(elDs("strong", d.titulo));
   if (d.descripcion) li.appendChild(elDs("p", d.descripcion, "suave"));
-  li.appendChild(elDs("p", "Meta: " + d.victorias + " victoria" + (d.victorias === 1 ? "" : "s") + " seguida" + (d.victorias === 1 ? "" : "s") + " en subida de copas", "din-pregunta"));
+  li.appendChild(elDs("p", "Meta: " + metaDesafioTexto(d), "din-pregunta"));
   li.appendChild(elDs("p", "Premio: " + d.premio.toLocaleString("es-CO") + " créditos · " + (d.inscripcion > 0 ? "Inscripción: " + d.inscripcion.toLocaleString("es-CO") + " créditos" : "Inscripción gratis"), "din-premio"));
-  li.appendChild(elDs("p", "Ganadores: " + d.ganadoresN + " de " + d.tope + (d.estado === "abierto" ? " · Cierra: " + new Date(d.cierra).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) : ""), "suave"));
+  li.appendChild(elDs("p", "Ganadores: " + d.ganadoresN + " de " + d.tope + (d.cupoInscritos ? " · Inscritos: " + d.inscritosN + " de " + d.cupoInscritos : "") + (d.estado === "abierto" ? " · Cierra: " + new Date(d.cierra).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) : ""), "suave"));
   if (d.mi) {
     if (d.mi.estado === "gano") li.appendChild(elDs("p", "🎉 ¡Cumpliste el evento! Ganaste " + d.premio.toLocaleString("es-CO") + " créditos" + (d.mi.pagado ? ". Ya están en tu cuenta." : ". Se están cargando…"), "din-premio"));
     else if (d.mi.estado === "sin_cupo") li.appendChild(elDs("p", "Llegaste a la meta, pero el tope de ganadores ya se había completado.", "suave"));
@@ -1778,8 +1786,8 @@ function tarjetaDesafio(d) {
       li.appendChild(elDs("p", d.estado === "abierto" ? "Estás inscrito. Juega batallas de escalera: una derrota reinicia la racha." : "Este evento terminó.", "suave"));
     }
   } else if (d.estado === "abierto") {
-    const lleno = d.ganadoresN >= d.tope;
-    const b = elDs("button", lleno ? "Tope completo" : (d.inscripcion > 0 ? "Inscribirme (" + d.inscripcion.toLocaleString("es-CO") + " créditos)" : "Inscribirme gratis"), "primario");
+    const lleno = d.ganadoresN >= d.tope || (d.cupoInscritos && d.inscritosN >= d.cupoInscritos);
+    const b = elDs("button", lleno ? "Cupo completo" : (d.inscripcion > 0 ? "Inscribirme (" + d.inscripcion.toLocaleString("es-CO") + " créditos)" : "Inscribirme gratis"), "primario");
     b.type = "button"; b.disabled = lleno;
     b.onclick = async () => {
       if (!confirm(d.inscripcion > 0 ? "¿Inscribirte por " + d.inscripcion + " créditos? No se devuelven si no completas la meta." : "¿Inscribirte en este evento?")) return;
