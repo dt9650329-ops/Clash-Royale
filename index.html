@@ -100,6 +100,13 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
 .din{display:flex;flex-direction:column;gap:6px;border:2px solid var(--linea);border-radius:12px;padding:14px;margin:0 0 14px}
 .din-premio{color:var(--oro);font-weight:700}
 .din-pregunta{margin:4px 0 0}
+.din-desc{margin:2px 0 4px;color:var(--texto)}
+.din-que{background:var(--fondo);border-left:4px solid var(--oro);border-radius:8px;padding:10px 12px}
+.din-que p{margin:4px 0 0}
+.din-como{color:var(--suave)}
+.din-como summary{cursor:pointer;font-weight:700;color:var(--texto)}
+.din-como ol{margin:8px 0 0;padding-left:22px}
+.din-como li{margin-bottom:6px}
 .din-ops{display:flex;flex-direction:column;gap:8px;margin:8px 0}
 .din-ops .chip{text-align:left;border-radius:12px}
 
@@ -1763,18 +1770,44 @@ function elDs(tag, texto, clase) { const e = document.createElement(tag); if (te
 function metaDesafioTexto(d) {
   const n = d.victorias, veces = n === 1 ? "vez" : "veces", plural = n === 1 ? "" : "s";
   if (d.tipo === "sin_perder") return n + " " + (n === 1 ? "partida" : "partidas") + " seguida" + plural + " sin perder";
-  if (d.tipo === "defensa") return n + " " + (n === 1 ? "partida" : "partidas") + " seguida" + plural + " sin que te tumben más de " + (d.toleranciaCoronas != null ? d.toleranciaCoronas : 0) + " corona" + ((d.toleranciaCoronas || 0) === 1 ? "" : "s");
-  if (d.tipo === "coronas") return n + " " + (n === 1 ? "partida" : "partidas") + " seguida" + plural + " tumbando al menos " + (d.coronasMinimas || 3) + " corona" + ((d.coronasMinimas || 3) === 1 ? "" : "s") + " cada una";
+  if (d.tipo === "defensa") return n + " " + (n === 1 ? "partida" : "partidas") + " seguida" + plural + " sin que te tumben más de " + (d.toleranciaCoronas != null ? d.toleranciaCoronas : 0) + " torre" + ((d.toleranciaCoronas || 0) === 1 ? "" : "s");
+  if (d.tipo === "coronas") return n + " " + (n === 1 ? "partida" : "partidas") + " seguida" + plural + " tumbando al menos " + (d.coronasMinimas || 3) + " torre" + ((d.coronasMinimas || 3) === 1 ? "" : "s") + " rival" + ((d.coronasMinimas || 3) === 1 ? "" : "es") + " cada una";
   if (d.tipo === "cartas") return n + " " + (n === 1 ? "victoria" : "victorias") + " seguida" + plural + " usando: " + (d.cartas || []).join(", ");
   return n + " victoria" + plural + " seguida" + plural + " en subida de copas";
 }
+// Explicación en palabras simples de qué hay que hacer en cada partida.
+function reglaDesafioTexto(d) {
+  const n = d.victorias, partidas = n === 1 ? "1 partida" : n + " partidas", seguidas = n === 1 ? "" : " seguidas";
+  const reinicia = n === 1 ? "" : " Si una partida no cumple, tu racha vuelve a 0.";
+  if (d.tipo === "sin_perder") return "Juega " + partidas + seguidas + " sin perder (empatar también vale)." + reinicia;
+  if (d.tipo === "defensa") { const t = d.toleranciaCoronas || 0; return "Juega " + partidas + seguidas + " sin que te tumben más de " + t + " torre" + (t === 1 ? "" : "s") + " en cada una." + reinicia; }
+  if (d.tipo === "coronas") { const c = d.coronasMinimas || 3; return "Juega " + partidas + seguidas + " tumbando al menos " + c + " torre" + (c === 1 ? "" : "s") + " rival" + (c === 1 ? "" : "es") + " en cada una." + reinicia; }
+  if (d.tipo === "cartas") return "Gana " + partidas + seguidas + " usando estas cartas: " + (d.cartas || []).join(", ") + "." + reinicia;
+  return "Gana " + partidas + seguidas + " en batallas de escalera (subida de copas)." + (n === 1 ? "" : " Si pierdes o empatas una, tu racha vuelve a 0.");
+}
 function tarjetaDesafio(d) {
   const li = elDs("li", null, "din");
+  const fmt = (x) => Number(x).toLocaleString("es-CO");
+  const cierra = d.estado === "abierto" && d.cierra ? new Date(d.cierra).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) : "";
   li.appendChild(elDs("strong", d.titulo));
-  if (d.descripcion) li.appendChild(elDs("p", d.descripcion, "suave"));
-  li.appendChild(elDs("p", "Meta: " + metaDesafioTexto(d), "din-pregunta"));
-  li.appendChild(elDs("p", "Premio: " + d.premio.toLocaleString("es-CO") + " créditos · " + (d.inscripcion > 0 ? "Inscripción: " + d.inscripcion.toLocaleString("es-CO") + " créditos" : "Inscripción gratis"), "din-premio"));
-  li.appendChild(elDs("p", "Ganadores: " + d.ganadoresN + " de " + d.tope + (d.cupoInscritos ? " · Inscritos: " + d.inscritosN + " de " + d.cupoInscritos : "") + (d.estado === "abierto" ? " · Cierra: " + new Date(d.cierra).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) : ""), "suave"));
+  if (d.descripcion) li.appendChild(elDs("p", d.descripcion, "din-desc"));
+  const que = elDs("div", null, "din-que");
+  que.appendChild(elDs("b", "Qué tienes que hacer"));
+  que.appendChild(elDs("p", reglaDesafioTexto(d)));
+  li.appendChild(que);
+  li.appendChild(elDs("p", "🏆 Premio: " + fmt(d.premio) + " créditos, solo para los primeros " + d.tope + " que lo logren (van " + d.ganadoresN + ").", "din-premio"));
+  li.appendChild(elDs("p", d.inscripcion > 0 ? "🎟️ Inscripción: " + fmt(d.inscripcion) + " créditos (no se devuelven si no completas la meta)." : "🎟️ Inscripción gratis.", "din-premio"));
+  if (cierra || d.cupoInscritos) li.appendChild(elDs("p", (cierra ? "⏰ Cierra: " + cierra : "") + (cierra && d.cupoInscritos ? " · " : "") + (d.cupoInscritos ? "Inscritos: " + d.inscritosN + " de " + d.cupoInscritos : ""), "suave"));
+  if (!d.mi && d.estado === "abierto") {
+    const como = elDs("details", null, "din-como"); como.open = true;
+    como.appendChild(elDs("summary", "¿Cómo funciona?"));
+    const ol = elDs("ol");
+    ["Pulsa «Inscribirme» (se cobra la inscripción de tus créditos).",
+     "Abre Clash Royale y juega batallas de escalera (las normales de subida de copas). Las amistosas y las de torneo no cuentan, y solo cuentan las que juegues después de inscribirte.",
+     "Vuelve aquí y pulsa «Actualizar mi avance» para ver tu racha.",
+     "Cuando llegues a la meta, los créditos del premio se cargan solos a tu cuenta."].forEach((t) => ol.appendChild(elDs("li", t)));
+    como.appendChild(ol); li.appendChild(como);
+  }
   if (d.mi) {
     if (d.mi.estado === "gano") li.appendChild(elDs("p", "🎉 ¡Cumpliste el evento! Ganaste " + d.premio.toLocaleString("es-CO") + " créditos" + (d.mi.pagado ? ". Ya están en tu cuenta." : ". Se están cargando…"), "din-premio"));
     else if (d.mi.estado === "sin_cupo") li.appendChild(elDs("p", "Llegaste a la meta, pero el tope de ganadores ya se había completado.", "suave"));
