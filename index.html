@@ -1740,10 +1740,13 @@ function pintarDinamicas(lista) {
   lista.forEach((d) => {
     const li = document.createElement("li"); li.className = "din";
     const t = document.createElement("b"); t.textContent = d.titulo || "Encuesta";
+    const costo = Number(d.costo || 0);
+    const cu = document.createElement("span"); cu.className = "din-premio";
+    cu.textContent = costo > 0 ? "Cuesta " + costo + (costo === 1 ? " crédito" : " créditos") : "Entrada gratis";
     const pr = document.createElement("span"); pr.className = "din-premio";
     pr.textContent = "Gana " + d.premio + (d.premio === 1 ? " moneda" : " monedas") + (d.pago === "alcerrar" ? " cuando cierre la encuesta" : "");
     const q = document.createElement("p"); q.className = "din-pregunta"; q.textContent = d.pregunta;
-    li.append(t, pr, q);
+    li.append(t, pr, cu, q);
     if (d.respondida) {
       const ok = document.createElement("p"); ok.className = "msg ok"; ok.textContent = d.pago === "alcerrar" ? "✅ Ya respondiste. Recibirás tus monedas cuando cierre la encuesta." : "✅ Ya respondiste esta encuesta y recibiste tu premio.";
       li.appendChild(ok);
@@ -1756,9 +1759,12 @@ function pintarDinamicas(lista) {
         ops.appendChild(b);
       });
       const env = document.createElement("button");
-      env.type = "button"; env.className = "primario"; env.textContent = "Responder y ganar";
+      env.type = "button"; env.className = "primario"; env.textContent = costo > 0 ? "Responder (" + costo + (costo === 1 ? " crédito" : " créditos") + ")" : "Responder y ganar";
       env.disabled = dinSeleccion[d.id] == null;
-      env.onclick = () => responderDinamica(d, env);
+      env.onclick = () => {
+        if (costo > 0 && !confirm("Responder esta encuesta cuesta " + costo + (costo === 1 ? " crédito" : " créditos") + ". Se cobra una sola vez al enviar tu respuesta.\n\n¿Quieres continuar?")) return;
+        responderDinamica(d, env);
+      };
       li.append(ops, env);
     }
     ul.appendChild(li);
