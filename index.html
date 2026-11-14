@@ -353,6 +353,7 @@ input:focus{border-color:var(--cian)}
     <div class="panel">
       <h2>Créditos</h2>
       <p class="copas" id="p-creditos">0</p>
+      <p class="suave" style="margin:-6px 0 14px">Bonos: <b id="p-bonos">0</b> · se pueden jugar, pero no se pueden retirar</p>
       <h2 style="margin-top:20px">Tienda de monedas</h2>
       <p class="suave" style="margin:0 0 12px">Cada moneda que recargas te da <b>1 XP</b> y sube tu nivel.</p>
       <div class="tienda" id="tienda">
@@ -524,7 +525,7 @@ input:focus{border-color:var(--cian)}
     <div class="seccion" data-sec="partida">
     <div class="panel">
       <h2>Cuadrar partida</h2>
-      <p class="suave">Tus créditos: <b id="pa-saldo">0</b></p>
+      <p class="suave">Tus créditos: <b id="pa-saldo">0</b><span id="pa-bonos-txt" class="oculto"> (incluye <b id="pa-bonos">0</b> en bonos)</span></p>
       <form id="form-reto" novalidate>
         <label>Monto a apostar<input id="pa-monto" type="number" inputmode="numeric" min="1" step="1" value="1" readonly placeholder="1"></label>
         <div class="chips" id="pa-chips"></div>
@@ -989,6 +990,17 @@ $("dlg-copiar").onclick = async () => {
 let MONTOS = [1, 5, 10, 20, 30];
 let MONTOS_ACTIVOS = [1];   // se actualiza desde el servidor (lo activa el admin); mientras carga, solo 1
 let saldo = 0, retos = [], modoReto = "ya", vistaPartidas = "programado";
+// saldo = créditos + bonos (lo que se puede jugar); saldoReal = solo créditos (lo único que se puede retirar)
+let saldoReal = 0, bonos = 0;
+function pintarSaldos() {
+  saldo = saldoReal + bonos;
+  $("p-creditos").textContent = saldoReal.toLocaleString("es-CO");
+  $("p-bonos").textContent = bonos.toLocaleString("es-CO");
+  $("pa-saldo").textContent = saldo.toLocaleString("es-CO");
+  $("pa-bonos").textContent = bonos.toLocaleString("es-CO");
+  $("pa-bonos-txt").classList.toggle("oculto", bonos <= 0);
+  pintarPartidas(); cargarCompras(); cargarRetiros();
+}
 const fnReto = (nombre, datos) => functions.httpsCallable(nombre)(datos);
 const msgFn = (e) => (((e.code || "").startsWith("functions/") && !["functions/internal", "functions/unknown"].includes(e.code)) ? e.message : "No pudimos completar la acción. Intenta de nuevo") + detalleError(e);
 const cuandoTxt = (r) => r.modo === "programado" ? new Date(r.cuando).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" }) : "Ya";
@@ -1258,7 +1270,7 @@ document.querySelectorAll("#retiros [data-retiro]").forEach((b) => {
     const p = esGP ? { creditos: GP.creditos } : PAQUETES[b.dataset.retiro];
     if (!p) return;
     mensaje("msg-retiro", "");
-    if (saldo < p.creditos) return mensaje("msg-retiro", "Necesitas " + p.creditos + " créditos para este retiro y tienes " + saldo.toLocaleString("es-CO"));
+    if (saldoReal < p.creditos) return mensaje("msg-retiro", "Necesitas " + p.creditos + " créditos recargados o ganados para este retiro y tienes " + saldoReal.toLocaleString("es-CO") + (bonos > 0 ? ". Los bonos (" + bonos.toLocaleString("es-CO") + ") no se pueden retirar" : ""));
     retiroElegido = b.dataset.retiro; metodoElegido = metodo;
     $("dr-cant").textContent = p.creditos + " créditos";
     $("dr-metodo").textContent = "Método de pago: " + NOMBRE_METODO[metodo];
@@ -1946,7 +1958,15 @@ function entrarPerfil(user) {
   const refCred = db.ref("wallets/" + user.uid + "/creditos");
   const refJug = db.ref("jugadores").orderByChild("creadoEn");
   const a = refPerfil.on("value", (s) => pintarPerfil(s.val() || {}, user));
-  const b = refCred.on("value", (s) => { saldo = s.val() || 0; $("p-creditos").textContent = saldo.toLocaleString("es-CO"); $("pa-saldo").textContent = saldo.toLocaleString("es-CO"); pintarPartidas(); cargarCompras(); cargarRetiros(); });
+  const b = refCred.on("value", (s) => { saldoReal = s.val() || 0; pintarSaldos(); });
+  // Los bonos se leen directo; si las reglas de la base no lo permiten, se piden al servidor cada 20 s.
+  let bonosSinLectura = false;
+  const refBon = db.ref("wallets/" + user.uid + "/bonos");
+  const bb = refBon.on("value", (s) => { bonos = s.val() || 0; pintarSaldos(); }, () => { bonosSinLectura = true; });
+  const tBonos = setInterval(async () => {
+    if (!bonosSinLectura) return;
+    try { const r = (await fnReto("miSaldo")).data; saldoReal = r.creditos || 0; bonos = r.bonos || 0; pintarSaldos(); } catch (e) { /* se reintenta */ }
+  }, 20000);
   cargarMontos();   // qué montos de apuesta están activos (lo decide el admin)
   cargarConfigRetiros();   // qué botones de retiro están activos y cuánto vale la tarjeta Google Play
   const refRetos = db.ref("retos").orderByChild("creadoEn").limitToLast(100);
@@ -1970,7 +1990,7 @@ function entrarPerfil(user) {
     if (jugadoresActual.length) pintarTabla(jugadoresActual.slice(), user.uid);
   }, (err) => console.error(err));
   cargarMiHistorial();
-  detener.push(() => refPerfil.off("value", a), () => refCred.off("value", b), () => refJug.off("value", c), () => refAmigos.off("value", e), () => refRetos.off("value", f));
+  detener.push(() => refPerfil.off("value", a), () => refCred.off("value", b), () => refBon.off("value", bb), () => clearInterval(tBonos), () => refJug.off("value", c), () => refAmigos.off("value", e), () => refRetos.off("value", f));
 }
 
 // --- Qué pantalla mostrar al abrir la página ---
