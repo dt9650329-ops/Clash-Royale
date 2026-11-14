@@ -1818,12 +1818,28 @@ function metaDesafioTexto(d) {
 // Explicación en palabras simples de qué hay que hacer en cada partida.
 function reglaDesafioTexto(d) {
   const n = d.victorias, partidas = n === 1 ? "1 partida" : n + " partidas", seguidas = n === 1 ? "" : " seguidas";
-  const reinicia = n === 1 ? "" : " Si una partida no cumple, tu racha vuelve a 0.";
+  const reinicia = " Si una partida no cumple, pierdes el intento y el evento termina para ti: tendrás que inscribirte otra vez.";
   if (d.tipo === "sin_perder") return "Juega " + partidas + seguidas + " sin perder (empatar también vale)." + reinicia;
   if (d.tipo === "defensa") { const t = d.toleranciaCoronas || 0; return "Juega " + partidas + seguidas + " sin que te tumben más de " + t + " torre" + (t === 1 ? "" : "s") + " en cada una." + reinicia; }
   if (d.tipo === "coronas") { const c = d.coronasMinimas || 3; return "Juega " + partidas + seguidas + " tumbando al menos " + c + " torre" + (c === 1 ? "" : "s") + " rival" + (c === 1 ? "" : "es") + " en cada una." + reinicia; }
   if (d.tipo === "cartas") return "Gana " + partidas + seguidas + " usando estas cartas: " + (d.cartas || []).join(", ") + "." + reinicia;
-  return "Gana " + partidas + seguidas + " en batallas de escalera (subida de copas)." + (n === 1 ? "" : " Si pierdes o empatas una, tu racha vuelve a 0.");
+  return "Gana " + partidas + seguidas + " en batallas de escalera (subida de copas)." + " Si pierdes o empatas una, pierdes el intento y tendrás que inscribirte otra vez.";
+}
+function botonInscribir(d, reintento) {
+  const lleno = d.ganadoresN >= d.tope || (!reintento && d.cupoInscritos && d.inscritosN >= d.cupoInscritos);
+  const costo = d.inscripcion > 0 ? " (" + d.inscripcion.toLocaleString("es-CO") + " créditos)" : " gratis";
+  const b = elDs("button", lleno ? "Cupo completo" : (reintento ? "Volver a inscribirme" : "Inscribirme") + costo, "primario");
+  b.type = "button"; b.disabled = lleno;
+  b.onclick = async () => {
+    if (!confirm(d.inscripcion > 0 ? "¿Inscribirte por " + d.inscripcion + " créditos? No se devuelven si no completas la meta." : "¿Inscribirte en este evento?")) return;
+    b.disabled = true;
+    try {
+      await functions.httpsCallable("desafioInscribir")({ id: d.id });
+      mensaje("msg-desafios", "¡Inscrito! Desde ahora cuentan tus batallas de escalera.", true);
+      cargarDesafios(true);
+    } catch (e) { mensaje("msg-desafios", errDesafio(e)); b.disabled = false; }
+  };
+  return b;
 }
 function tarjetaDesafio(d) {
   const li = elDs("li", null, "din");
@@ -1851,27 +1867,19 @@ function tarjetaDesafio(d) {
   if (d.mi) {
     if (d.mi.estado === "gano") li.appendChild(elDs("p", "🎉 ¡Cumpliste el evento! Ganaste " + d.premio.toLocaleString("es-CO") + " créditos" + (d.mi.pagado ? ". Ya están en tu cuenta." : ". Se están cargando…"), "din-premio"));
     else if (d.mi.estado === "sin_cupo") li.appendChild(elDs("p", "Llegaste a la meta, pero el tope de ganadores ya se había completado.", "suave"));
-    else {
+    else if (d.mi.estado === "perdio") {
+      li.appendChild(elDs("p", "❌ Perdiste este intento: una partida no cumplió la meta. El evento terminó para ti. Mejor racha: " + d.mi.mejor + ".", "din-premio"));
+      if (d.estado === "abierto") li.appendChild(botonInscribir(d, true));
+      else li.appendChild(elDs("p", "Este evento ya terminó.", "suave"));
+    } else {
       li.appendChild(elDs("p", "Tu racha: " + d.mi.racha + " de " + d.victorias + " · Mejor racha: " + d.mi.mejor, "din-premio"));
       const barra = elDs("div"); barra.style.cssText = "height:10px;border-radius:999px;background:var(--linea);overflow:hidden";
       const relleno = elDs("div"); relleno.style.cssText = "height:100%;background:var(--oro);width:" + Math.min(100, Math.round(d.mi.racha / d.victorias * 100)) + "%";
       barra.appendChild(relleno); li.appendChild(barra);
-      li.appendChild(elDs("p", d.estado === "abierto" ? "Estás inscrito. Juega batallas de escalera: una derrota reinicia la racha." : "Este evento terminó.", "suave"));
+      li.appendChild(elDs("p", d.estado === "abierto" ? "Estás inscrito. Juega batallas de escalera: si una partida no cumple, pierdes el intento y tendrás que volver a inscribirte." : "Este evento terminó.", "suave"));
     }
   } else if (d.estado === "abierto") {
-    const lleno = d.ganadoresN >= d.tope || (d.cupoInscritos && d.inscritosN >= d.cupoInscritos);
-    const b = elDs("button", lleno ? "Cupo completo" : (d.inscripcion > 0 ? "Inscribirme (" + d.inscripcion.toLocaleString("es-CO") + " créditos)" : "Inscribirme gratis"), "primario");
-    b.type = "button"; b.disabled = lleno;
-    b.onclick = async () => {
-      if (!confirm(d.inscripcion > 0 ? "¿Inscribirte por " + d.inscripcion + " créditos? No se devuelven si no completas la meta." : "¿Inscribirte en este evento?")) return;
-      b.disabled = true;
-      try {
-        await functions.httpsCallable("desafioInscribir")({ id: d.id });
-        mensaje("msg-desafios", "¡Inscrito! Desde ahora cuentan tus batallas de escalera.", true);
-        cargarDesafios(true);
-      } catch (e) { mensaje("msg-desafios", errDesafio(e)); b.disabled = false; }
-    };
-    li.appendChild(b);
+    li.appendChild(botonInscribir(d, false));
   } else {
     li.appendChild(elDs("p", "Este evento ya terminó.", "suave"));
   }
