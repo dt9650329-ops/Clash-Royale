@@ -369,7 +369,7 @@ input:focus{border-color:var(--cian)}
         <div class="saldo-caja bon">
           <h3>2 · Créditos en bonos</h3>
           <p class="copas" id="p-bonos">0</p>
-          <p class="suave">Los que te da el administrador o ganas en eventos y dinámicas. Se pueden jugar, pero no se retiran. Si los apuestas y ganas, el premio pasa a retirables.</p>
+          <p class="suave">Los que te da el administrador o ganas en eventos y dinámicas. Se pueden jugar, pero no se retiran. Si apuestas bonos y ganas, el bono apostado se gasta y lo que le ganas al rival pasa a retirables.</p>
         </div>
       </div>
       <h2 style="margin-top:20px">Tienda de monedas</h2>
@@ -1142,7 +1142,7 @@ function pintarPartidas() {
       } else if (r.estado === "finalizado" && reciente) {
         const gane = !!r.resultado && r.resultado.ganadorUid === uid;
         const co = r.resultado ? r.resultado.coronasGanador + "-" + r.resultado.coronasPerdedor : "";
-        mi.appendChild(fila(gane ? "¡Ganaste!" : "Perdiste", "vs " + otro.nombre + (co ? " · coronas " + (gane ? co : co.split("-").reverse().join("-")) : ""), gane ? "+" + (r.premio || r.monto * 2) : "−" + r.monto, "", false, null));
+        mi.appendChild(fila(gane ? "¡Ganaste!" : "Perdiste", "vs " + otro.nombre + (co ? " · coronas " + (gane ? co : co.split("-").reverse().join("-")) : ""), gane ? "+" + (r.pagado != null ? r.pagado : (r.premio || r.monto * 2)) : "−" + r.monto, "", false, null));
       } else if (r.estado === "empate" && reciente) {
         mi.appendChild(fila("Empate", "vs " + otro.nombre + " · Créditos devueltos", String(r.monto), "", false, null));
       } else if (r.estado === "sin_jugar" && reciente) {
