@@ -44,6 +44,14 @@ dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0}
 dt{color:var(--suave)}
 dd{margin:0;text-align:right;overflow-wrap:anywhere}
 .copas{font-size:3rem;line-height:1;color:var(--oro);margin:0}
+.saldos{display:grid;gap:10px;margin:0 0 16px}
+.saldo-caja{padding:14px;border-radius:14px;border:2px solid var(--linea);background:rgba(5,11,32,.55)}
+.saldo-caja h3{margin:0 0 4px;font-size:1rem;color:var(--suave);font-weight:700}
+.saldo-caja .copas{font-size:2.6rem}
+.saldo-caja p.suave{margin:6px 0 0;font-size:.9rem}
+.saldo-caja.ret{border-color:var(--ok)}
+.saldo-caja.ret .copas{color:var(--ok)}
+.saldo-caja.bon{border-color:var(--oro)}
 .etiqueta{color:var(--suave);margin:2px 0 16px}
 table{width:100%;border-collapse:collapse}
 th,td{padding:10px 6px;text-align:left;border-bottom:1px solid var(--linea)}
@@ -352,8 +360,18 @@ input:focus{border-color:var(--cian)}
     <div class="seccion" data-sec="creditos">
     <div class="panel">
       <h2>Créditos</h2>
-      <p class="copas" id="p-creditos">0</p>
-      <p class="suave" style="margin:-6px 0 14px">Bonos: <b id="p-bonos">0</b> · se pueden jugar, pero no se pueden retirar</p>
+      <div class="saldos">
+        <div class="saldo-caja ret">
+          <h3>1 · Créditos retirables</h3>
+          <p class="copas" id="p-creditos">0</p>
+          <p class="suave">Los que recargas, apuestas y ganas. Se pueden jugar y retirar.</p>
+        </div>
+        <div class="saldo-caja bon">
+          <h3>2 · Créditos en bonos</h3>
+          <p class="copas" id="p-bonos">0</p>
+          <p class="suave">Los que te da el administrador o ganas en eventos y dinámicas. Se pueden jugar, pero no se retiran. Si los apuestas y ganas, el premio pasa a retirables.</p>
+        </div>
+      </div>
       <h2 style="margin-top:20px">Tienda de monedas</h2>
       <p class="suave" style="margin:0 0 12px">Cada moneda que recargas te da <b>1 XP</b> y sube tu nivel.</p>
       <div class="tienda" id="tienda">
@@ -1559,9 +1577,11 @@ function tarjetaTorneoPase(t) {
 
   const dl = nodo("dl");
   const dato = (k, v) => dl.append(nodo("dt", "", k), nodo("dd", "", v));
-  dato("Premio", t.premio);
+  const premios = t.premios && t.premios.length ? t.premios : [t.premio];
+  premios.forEach((p, i) => dato(premios.length > 1 ? (i + 1) + ".º puesto" : "Premio", p));   // cada puesto con su premio
   dato("Inscritos", t.cupos ? t.inscritos + " de " + t.cupos : String(t.inscritos));
-  if (t.ganador) dato("Ganador", t.ganador.nombre + (t.ganador.tag ? " · " + t.ganador.tag : ""));
+  if (t.ganadores && t.ganadores.length > 1) t.ganadores.forEach((g) => dato("Ganó el " + g.puesto + ".º puesto", g.nombre + (g.tag ? " · " + g.tag : "")));
+  else if (t.ganador) dato("Ganador", t.ganador.nombre + (t.ganador.tag ? " · " + t.ganador.tag : ""));
   li.appendChild(dl);
   if (t.descripcion) li.appendChild(nodo("p", "desc", t.descripcion));
   if (t.juego) {   // solo lo ven los inscritos
@@ -1601,10 +1621,12 @@ function tarjetaTorneoPase(t) {
     }
   } else if (t.estado === "en-juego") {
     nota(t.inscrito ? "Estás inscrito. El torneo está en juego." : "Las inscripciones ya cerraron.", t.inscrito);
-  } else if (t.estado === "finalizado" && t.soyGanador) {
-    if (t.premioEntregado) nota("¡Tu " + t.premio + " ya fue entregado! ✓", true);
-    else if (t.premioReclamado) nota("Ya reclamaste tu premio. El administrador te lo enviará pronto.", true);
-    else boton("Reclamar mi " + t.premio, "primario", () => accionTorneo("torneoReclamar", t.id, "¿Reclamar tu " + t.premio + "?\n\nEl administrador verá tu tag de Supercell para enviártelo.", "Premio reclamado. El administrador te lo enviará pronto."));
+  } else if (t.estado === "finalizado" && (t.miPuesto || t.soyGanador)) {
+    const mp = t.miPuesto || { puesto: 1, premio: t.premio, reclamado: t.premioReclamado, entregado: t.premioEntregado };
+    const cuando = premios.length > 1 ? " (" + mp.puesto + ".º puesto)" : "";
+    if (mp.entregado) nota("¡Tu " + mp.premio + cuando + " ya fue entregado! ✓", true);
+    else if (mp.reclamado) nota("Ya reclamaste tu premio" + cuando + ". El administrador te lo enviará pronto.", true);
+    else boton("Reclamar mi " + mp.premio + cuando, "primario", () => accionTorneo("torneoReclamar", t.id, "¿Reclamar tu " + mp.premio + cuando + "?\n\nEl administrador verá tu tag de Supercell para enviártelo.", "Premio reclamado. El administrador te lo enviará pronto."));
   } else if (t.estado === "cancelado") {
     nota("Este torneo fue cancelado.");
   }
