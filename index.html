@@ -970,6 +970,14 @@ $("form-enlace").addEventListener("submit", async (ev) => {
   }
 });
 
+// ¿El jugador tiene un enlace de amigo utilizable? Tiene que ser válido y del mismo tag que su perfil.
+function enlaceValido(j) {
+  if (!j || !j.enlace) return false;
+  const t = tagDeEnlace(j.enlace);
+  if (!t) return false;
+  return !j.tag || t === String(j.tag).toUpperCase();
+}
+
 // Marca en NUESTRO sistema que los dos ya son amigos (se guarda en las dos direcciones).
 async function marcarAmigos(j) {
   const yo = auth.currentUser;
@@ -986,6 +994,7 @@ async function marcarAmigos(j) {
 }
 
 function abrirAmigo(j) {
+  if (!enlaceValido(j)) { mensaje("msg-partidas", "Ese jugador todavía no tiene un enlace de amigo válido guardado. Pídele que lo pegue en Mi perfil."); return; }
   dialogoActual = j;
   $("dlg-nombre").textContent = j.nombreClash || j.nombre || "Jugador";
   $("dlg-enlace").href = j.enlace;
@@ -1144,7 +1153,8 @@ function pintarPartidas() {
       const otro = soyCreador ? { uid: r.rivalUid, nombre: r.rivalNombre, tag: r.rivalTag } : { uid: r.creadorUid, nombre: r.creadorNombre, tag: r.creadorTag };
       if (r.estado === "aceptado") {
         const j = jugadoresActual.find((x) => x.uid === otro.uid);
-        mi.appendChild(fila("vs " + otro.nombre, otro.tag + " · Aceptada: jueguen una amistosa 1v1", r.monto + " · " + cuandoTxt(r), j && j.enlace ? "Ver enlace" : "", false, () => abrirAmigo(j)));
+        const okEnlace = enlaceValido(j);
+        mi.appendChild(fila("vs " + otro.nombre, otro.tag + " · Aceptada: jueguen una amistosa 1v1" + (okEnlace ? "" : " · ⚠ aún no tiene enlace de amigo válido: pídele que lo guarde en Mi perfil"), r.monto + " · " + cuandoTxt(r), okEnlace ? "Ver enlace" : "", false, () => abrirAmigo(j)));
       } else if (r.estado === "liquidando") {
         mi.appendChild(fila("vs " + otro.nombre, "Calculando el resultado…", r.monto + " · " + cuandoTxt(r), "", false, null));
       } else if (r.estado === "finalizado" && reciente) {
@@ -1490,7 +1500,7 @@ function pintarTabla(lista, miUid) {
       ok.className = "ya";
       ok.textContent = amigosSet.has(j.uid) ? "Ya son amigos ✓" : "Ya jugaron ✓";
       tdAccion.appendChild(ok);
-      if (j.enlace && tagDeEnlace(j.enlace)) {
+      if (enlaceValido(j)) {
         const v = document.createElement("button");
         v.type = "button";
         v.className = "vinculo";
@@ -1498,7 +1508,7 @@ function pintarTabla(lista, miUid) {
         v.onclick = () => abrirAmigo(j);
         tdAccion.appendChild(v);
       }
-    } else if (j.enlace && tagDeEnlace(j.enlace)) {
+    } else if (enlaceValido(j)) {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "secundario mini";
@@ -1808,11 +1818,17 @@ function pintarDinamicas(lista) {
     const cu = document.createElement("span"); cu.className = "din-premio";
     cu.textContent = costo > 0 ? "Cuesta " + costo + (costo === 1 ? " crédito" : " créditos") : "Entrada gratis";
     const pr = document.createElement("span"); pr.className = "din-premio";
-    pr.textContent = "Gana " + d.premio + (d.premio === 1 ? " moneda" : " monedas") + (d.pago === "alcerrar" ? " cuando cierre la encuesta" : "");
+    pr.textContent = "Gana " + d.premio + (d.premio === 1 ? " moneda" : " monedas") + (d.conCorrecta ? " si aciertas" : "") + (d.pago === "alcerrar" ? (d.conCorrecta ? ", cuando cierre la encuesta" : " cuando cierre la encuesta") : "");
     const q = document.createElement("p"); q.className = "din-pregunta"; q.textContent = d.pregunta;
     li.append(t, pr, cu, q);
-    if (d.respondida) {
-      const ok = document.createElement("p"); ok.className = "msg ok"; ok.textContent = d.pago === "alcerrar" ? "✅ Ya respondiste. Recibirás tus monedas cuando cierre la encuesta." : "✅ Ya respondiste esta encuesta y recibiste tu premio.";
+    if (d.conCorrecta && !d.respondida) {
+      const av = document.createElement("p"); av.className = "suave"; av.textContent = "🎯 Solo hay una respuesta correcta. Si aciertas, cobras el premio; si fallas, pierdes y ya no puedes volver a votar."; li.appendChild(av);
+    }
+    if (d.respondida && d.perdio) {
+      const mal = document.createElement("p"); mal.className = "msg"; mal.textContent = "❌ Respondiste mal y perdiste. Ya no puedes volver a votar en esta encuesta.";
+      li.appendChild(mal);
+    } else if (d.respondida) {
+      const ok = document.createElement("p"); ok.className = "msg ok"; ok.textContent = d.pago === "alcerrar" ? (d.conCorrecta ? "✅ ¡Acertaste! Recibirás tus monedas cuando cierre la encuesta." : "✅ Ya respondiste. Recibirás tus monedas cuando cierre la encuesta.") : "✅ Ya respondiste esta encuesta y recibiste tu premio.";
       li.appendChild(ok);
     } else {
       const ops = document.createElement("div"); ops.className = "din-ops";
@@ -1823,10 +1839,12 @@ function pintarDinamicas(lista) {
         ops.appendChild(b);
       });
       const env = document.createElement("button");
-      env.type = "button"; env.className = "primario"; env.textContent = costo > 0 ? "Responder (" + costo + (costo === 1 ? " crédito" : " créditos") + ")" : "Responder y ganar";
+      env.type = "button"; env.className = "primario"; env.textContent = costo > 0 ? "Responder (" + costo + (costo === 1 ? " crédito" : " créditos") + ")" : (d.conCorrecta ? "Responder" : "Responder y ganar");
       env.disabled = dinSeleccion[d.id] == null;
       env.onclick = () => {
-        if (costo > 0 && !confirm("Responder esta encuesta cuesta " + costo + (costo === 1 ? " crédito" : " créditos") + ". Se cobra una sola vez al enviar tu respuesta.\n\n¿Quieres continuar?")) return;
+        const textoConfirmar = (costo > 0 ? "Responder esta encuesta cuesta " + costo + (costo === 1 ? " crédito" : " créditos") + ". Se cobra una sola vez al enviar tu respuesta." : "") +
+          (d.conCorrecta ? (costo > 0 ? "\n\n" : "") + "Solo hay una respuesta correcta: si fallas, pierdes" + (costo > 0 ? " (la entrada no se devuelve)" : "") + " y ya no podrás volver a votar." : "");
+        if (textoConfirmar && !confirm(textoConfirmar + "\n\n¿Quieres continuar?")) return;
         responderDinamica(d, env);
       };
       li.append(ops, env);
@@ -1944,7 +1962,8 @@ async function responderDinamica(d, btn) {
   try {
     const r = (await functions.httpsCallable("responderDinamica")({ id: d.id, opcion: dinSeleccion[d.id] })).data;
     delete dinSeleccion[d.id];
-    mensaje("msg-dinamicas", r.pendiente ? "¡Respuesta enviada! Recibirás " + r.premio + (r.premio === 1 ? " moneda" : " monedas") + " cuando cierre la encuesta." : "¡Listo! Ganaste " + r.premio + (r.premio === 1 ? " moneda." : " monedas."), true);
+    if (r.perdio) mensaje("msg-dinamicas", "❌ Respuesta incorrecta: perdiste" + (r.costo > 0 ? " y no se devuelve tu entrada" : "") + ". Ya no puedes volver a votar en esta encuesta.");
+    else mensaje("msg-dinamicas", (r.acerto ? "🎉 ¡Correcto! " : "") + (r.pendiente ? "¡Respuesta enviada! Recibirás " + r.premio + (r.premio === 1 ? " moneda" : " monedas") + " cuando cierre la encuesta." : "¡Listo! Ganaste " + r.premio + (r.premio === 1 ? " moneda." : " monedas.")), true);
     await cargarDinamicas(true);
   } catch (e) {
     mensaje("msg-dinamicas", errorDinamicas(e, "No pudimos enviar tu respuesta. Intenta de nuevo"));
@@ -2044,6 +2063,7 @@ function entrarPerfil(user) {
     mensaje("msg-tabla", "");
     jugadoresActual = lista;
     pintarTabla(lista.slice(), user.uid);
+    pintarPartidas();   // la fila «Aceptada» necesita el enlace del rival; si los jugadores llegaron después de los retos, no se pintaba el botón
   }, (e) => mensaje("msg-tabla", "No pudimos cargar la tabla. Revisa las reglas de la base de datos" + detalleError(e)));
   const refAmigos = db.ref("amigos/" + user.uid);
   const e = refAmigos.on("value", (s) => {
