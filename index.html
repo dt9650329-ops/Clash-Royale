@@ -136,6 +136,8 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
 .mazo-cartas figure{margin:0;text-align:center}
 .mazo-cartas img{width:100%;height:auto;display:block;border-radius:6px;background:var(--fondo)}
 .mazo-cartas figcaption{font-size:.68rem;line-height:1.1;margin-top:2px;color:var(--suave)}
+.mazo-acc{display:flex;gap:8px;flex-wrap:wrap}
+.mazo-acc .primario,.mazo-acc .secundario{flex:1;width:auto;min-width:140px;display:block;text-align:center;text-decoration:none;font-size:.9rem;padding:10px 12px}
 .mazo-pie{display:flex;gap:12px;flex-wrap:wrap;color:var(--suave);font-size:.85rem}
 
 /* ---- Legión Real: imágenes y acabado visual ---- */
@@ -2089,6 +2091,21 @@ function pintarMazos(mazos, actualizado) {
     if (m.hora) partes.push(haceTxt(m.hora));
     partes.forEach((t) => { const s = document.createElement("span"); s.textContent = t; pie.appendChild(s); });
     caja.append(cab, grid, pie);
+    const ids = (m.cartas || []).map((c) => Number(c.d) || 0);
+    if (ids.length === 8 && ids.every((n) => n > 0)) {
+      const lista = ids.join(";");
+      const acc = document.createElement("div"); acc.className = "mazo-acc";
+      const abrir = document.createElement("a"); abrir.className = "primario"; abrir.textContent = "📲 Abrir en el juego";
+      abrir.href = "https://link.clashroyale.com/deck/es?deck=" + lista + "&l=Royals"; abrir.target = "_blank"; abrir.rel = "noopener";
+      const copiar = document.createElement("button"); copiar.type = "button"; copiar.className = "secundario"; copiar.textContent = "📋 Copiar enlace";
+      copiar.onclick = async () => {
+        const url = "https://link.clashroyale.com/deck/es?deck=" + lista + "&l=Royals";
+        try { await navigator.clipboard.writeText(url); copiar.textContent = "✅ ¡Copiado!"; }
+        catch (e) { window.prompt("Copia este enlace y ábrelo en el celular:", url); }
+        setTimeout(() => { copiar.textContent = "📋 Copiar enlace"; }, 2000);
+      };
+      acc.append(abrir, copiar); caja.appendChild(acc);
+    }
     cont.appendChild(caja);
   });
 }
