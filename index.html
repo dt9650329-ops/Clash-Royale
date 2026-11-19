@@ -117,6 +117,15 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
 .din-como li{margin-bottom:6px}
 .din-ops{display:flex;flex-direction:column;gap:8px;margin:8px 0}
 .din-ops .chip{text-align:left;border-radius:12px}
+.mazo{display:flex;flex-direction:column;gap:8px;border:2px solid var(--linea);border-radius:12px;padding:12px;margin:0 0 12px}
+.mazo-cab{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.mazo-gano{color:var(--ok);font-weight:700}
+.mazo-perdio{color:var(--error);font-weight:700}
+.mazo-cartas{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.mazo-cartas figure{margin:0;text-align:center}
+.mazo-cartas img{width:100%;height:auto;display:block;border-radius:6px;background:var(--fondo)}
+.mazo-cartas figcaption{font-size:.68rem;line-height:1.1;margin-top:2px;color:var(--suave)}
+.mazo-pie{display:flex;gap:12px;flex-wrap:wrap;color:var(--suave);font-size:.85rem}
 
 /* ---- Legión Real: imágenes y acabado visual ---- */
 :root{
@@ -297,6 +306,7 @@ input:focus{border-color:var(--cian)}
           <button type="button" data-sec="torneos">Torneos</button>
           <button type="button" data-sec="dinamicas">Dinámicas</button>
           <button type="button" data-sec="desafios">Eventos</button>
+          <button type="button" data-sec="clan">Clan Legión Real</button>
           <button type="button" data-sec="historial">Historial</button>
           <button type="button" data-sec="creditos">Créditos</button>
           <button type="button" data-sec="guia">Cómo jugar</button>
@@ -650,6 +660,27 @@ input:focus{border-color:var(--cian)}
     </div>
     </div>
 
+    <div class="seccion" data-sec="clan">
+    <div class="panel">
+      <div class="barra">
+        <h2>Clan Legión Real</h2>
+        <button type="button" id="btn-clan" class="secundario mini">Actualizar</button>
+      </div>
+      <p id="msg-clan" class="msg" role="status"></p>
+      <div id="clan-puerta" class="oculto">
+        <p id="clan-puerta-txt" class="suave"></p>
+        <button type="button" id="btn-clan-pedir" class="primario">Solicitar acceso</button>
+      </div>
+      <div id="clan-contenido" class="oculto">
+        <h3>Mazos de los mejores del juego</h3>
+        <p class="suave">El último mazo que usó cada uno de los mejores jugadores del ranking mundial de Path of Legends. Se actualiza cada hora.</p>
+        <p id="clan-actualizado" class="suave"></p>
+        <div id="clan-mazos"></div>
+        <p id="clan-vacio" class="suave oculto">Todavía no hay mazos cargados. Vuelve en un rato.</p>
+      </div>
+    </div>
+    </div>
+
     <div class="seccion" data-sec="desafios">
     <div class="panel">
       <div class="barra">
@@ -801,7 +832,7 @@ $("btn-google").onclick = async () => {
 $("btn-salir").onclick = () => auth.signOut();
 
 // --- Menú hamburguesa y secciones ---
-const SECCIONES = ["perfil", "clash", "partida", "tabla", "mega", "torneos", "dinamicas", "desafios", "historial", "creditos", "guia"];
+const SECCIONES = ["perfil", "clash", "partida", "tabla", "mega", "torneos", "dinamicas", "desafios", "clan", "historial", "creditos", "guia"];
 
 function abrirMenu(abrir) {
   $("menu").classList.toggle("abierto", abrir);
@@ -827,6 +858,7 @@ function irA(sec) {
   if (sec === "torneos" || sec === "tabla") cargarTorneosPase();   // la Tabla también muestra los torneos
   if (sec === "dinamicas") cargarDinamicas();
   if (sec === "desafios") cargarDesafios(true);
+  if (sec === "clan") cargarClan();
 }
 
 $("btn-menu").onclick = () => abrirMenu(!$("menu").classList.contains("abierto"));
@@ -1971,6 +2003,105 @@ async function responderDinamica(d, btn) {
   }
 }
 $("btn-dinamicas").onclick = () => cargarDinamicas();
+
+// ---------- Clan Legión Real: acceso que aprueba el admin + mazos de los mejores ----------
+function errorClan(e, porDefecto) {
+  if (e.code === "functions/not-found") return "Esta sección todavía no está disponible.";
+  const propio = e.code && e.code.startsWith("functions/") && !["functions/internal", "functions/unknown"].includes(e.code);
+  return (propio ? e.message : porDefecto) + detalleError(e);
+}
+function haceTxt(ms) {
+  const m = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if (m < 1) return "ahora mismo";
+  if (m < 60) return "hace " + m + " min";
+  const h = Math.round(m / 60);
+  if (h < 24) return "hace " + h + (h === 1 ? " hora" : " horas");
+  const d = Math.round(h / 24);
+  return "hace " + d + (d === 1 ? " día" : " días");
+}
+function pintarClanPuerta(estado) {
+  const aprobada = estado === "aprobada";
+  $("clan-contenido").classList.toggle("oculto", !aprobada);
+  $("clan-puerta").classList.toggle("oculto", aprobada);
+  if (aprobada) return;
+  const txt = $("clan-puerta-txt"), btn = $("btn-clan-pedir");
+  btn.classList.remove("oculto");
+  if (estado === "pendiente") {
+    txt.textContent = "⏳ Tu solicitud está en revisión. Cuando el administrador la apruebe, podrás entrar aquí.";
+    btn.classList.add("oculto");
+  } else if (estado === "expulsada") {
+    txt.textContent = "Fuiste retirado de esta sección. Si crees que fue un error, habla con el administrador.";
+    btn.classList.add("oculto");
+  } else if (estado === "rechazada") {
+    txt.textContent = "Tu acceso no fue aprobado. Si crees que fue un error, puedes volver a solicitarlo.";
+    btn.textContent = "Solicitar de nuevo";
+  } else {
+    txt.textContent = "Esta sección es solo para miembros del clan Legión Real. Pide permiso y el administrador te dará acceso.";
+    btn.textContent = "Solicitar acceso";
+  }
+}
+function pintarMazos(mazos, actualizado) {
+  const cont = $("clan-mazos"); cont.innerHTML = "";
+  $("clan-vacio").classList.toggle("oculto", mazos.length > 0);
+  $("clan-actualizado").textContent = actualizado ? "Actualizado " + haceTxt(actualizado) + "." : "";
+  mazos.forEach((m) => {
+    const caja = document.createElement("div"); caja.className = "mazo";
+    const cab = document.createElement("div"); cab.className = "mazo-cab";
+    const quien = document.createElement("b"); quien.textContent = "#" + m.rank + " · " + m.nombre;
+    const res = document.createElement("span");
+    res.className = m.resultado === "gano" ? "mazo-gano" : m.resultado === "perdio" ? "mazo-perdio" : "suave";
+    res.textContent = (m.resultado === "gano" ? "✅ Ganó " : m.resultado === "perdio" ? "❌ Perdió " : "➖ Empate ") + m.coronas;
+    cab.append(quien, res);
+    const grid = document.createElement("div"); grid.className = "mazo-cartas";
+    (m.cartas || []).forEach((c) => {
+      const f = document.createElement("figure");
+      if (/^https:\/\/api-assets\.clashroyale\.com\//.test(c.i || "")) {
+        const img = document.createElement("img"); img.src = c.i; img.alt = c.n; img.loading = "lazy"; f.appendChild(img);
+      }
+      const cap = document.createElement("figcaption"); cap.textContent = c.n; f.appendChild(cap);
+      grid.appendChild(f);
+    });
+    const pie = document.createElement("div"); pie.className = "mazo-pie";
+    const partes = ["⚡ " + m.elixir + " de elixir", (m.puntos || 0).toLocaleString("es-CO") + " pts"];
+    if (m.ranked) partes.push("Ranked");
+    if (m.hora) partes.push(haceTxt(m.hora));
+    partes.forEach((t) => { const s = document.createElement("span"); s.textContent = t; pie.appendChild(s); });
+    caja.append(cab, grid, pie);
+    cont.appendChild(caja);
+  });
+}
+async function cargarMazosClan() {
+  try {
+    const r = (await functions.httpsCallable("clanMazos")()).data;
+    pintarMazos(r.mazos || [], r.actualizado || 0);
+  } catch (e) {
+    if (e.code === "functions/permission-denied") {   // le quitaron el acceso mientras tenía la página abierta
+      try { const e2 = (await functions.httpsCallable("clanEstado")()).data; pintarClanPuerta(e2.estado === "aprobada" ? "ninguna" : e2.estado); }
+      catch (_) { pintarClanPuerta("ninguna"); }
+      return;
+    }
+    mensaje("msg-clan", errorClan(e, "No pudimos cargar los mazos. Intenta de nuevo"));
+  }
+}
+async function cargarClan() {
+  mensaje("msg-clan", "");
+  try {
+    const e = (await functions.httpsCallable("clanEstado")()).data;
+    pintarClanPuerta(e.estado);
+    if (e.estado === "aprobada") await cargarMazosClan();
+  } catch (e) { mensaje("msg-clan", errorClan(e, "No pudimos cargar esta sección. Intenta de nuevo")); }
+}
+$("btn-clan").onclick = () => cargarClan();
+$("btn-clan-pedir").onclick = async () => {
+  const b = $("btn-clan-pedir"); b.disabled = true; mensaje("msg-clan", "Enviando…", true);
+  try {
+    const r = (await functions.httpsCallable("clanSolicitar")()).data;
+    pintarClanPuerta(r.estado);
+    mensaje("msg-clan", r.estado === "pendiente" ? "Solicitud enviada. El administrador la revisará." : "", true);
+    if (r.estado === "aprobada") await cargarMazosClan();
+  } catch (e) { mensaje("msg-clan", errorClan(e, "No pudimos enviar tu solicitud. Intenta de nuevo")); }
+  b.disabled = false;
+};
 
 // Copia pública del perfil (sin correo ni teléfono) para que aparezca en la tabla.
 function sincronizarPublico(p, user) {
