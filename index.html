@@ -117,6 +117,17 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
 .din-como li{margin-bottom:6px}
 .din-ops{display:flex;flex-direction:column;gap:8px;margin:8px 0}
 .din-ops .chip{text-align:left;border-radius:12px}
+.miem-res{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 14px}
+.miem-res div{border:2px solid var(--linea);border-radius:12px;padding:8px;text-align:center;background:rgba(5,11,32,.55)}
+.miem-res b{display:block;font-size:1.1rem;color:var(--oro)}
+.miem-res span{font-size:.75rem;color:var(--suave)}
+.miem-orden{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.miem{border:2px solid var(--linea);border-radius:12px;padding:10px 12px;margin:0 0 8px}
+.miem-cab{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.miem-rol{font-size:.78rem;color:var(--suave)}
+.miem-datos{display:flex;gap:6px 14px;flex-wrap:wrap;margin-top:6px;font-size:.85rem;color:var(--suave)}
+.miem-datos .g{color:var(--ok);font-weight:700}
+.miem-datos .p{color:var(--error);font-weight:700}
 .mazo{display:flex;flex-direction:column;gap:8px;border:2px solid var(--linea);border-radius:12px;padding:12px;margin:0 0 12px}
 .mazo-cab{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
 .mazo-gano{color:var(--ok);font-weight:700}
@@ -672,6 +683,17 @@ input:focus{border-color:var(--cian)}
         <button type="button" id="btn-clan-pedir" class="primario">Solicitar acceso</button>
       </div>
       <div id="clan-contenido" class="oculto">
+        <h3>Miembros del clan</h3>
+        <div id="clan-resumen" class="miem-res"></div>
+        <div class="miem-orden" id="miem-orden">
+          <button type="button" class="chip" data-ord="donadas">Donaciones</button>
+          <button type="button" class="chip" data-ord="trofeos">Trofeos</button>
+          <button type="button" class="chip" data-ord="ganadas">Victorias</button>
+          <button type="button" class="chip" data-ord="guerra">Guerra</button>
+        </div>
+        <p id="miem-act" class="suave"></p>
+        <div id="clan-miembros"></div>
+        <p id="miem-vacio" class="suave oculto">No hay datos del clan todavía. Vuelve en un rato.</p>
         <h3>Mazos de los mejores del juego</h3>
         <p class="suave">El último mazo que usó cada uno de los mejores jugadores del ranking mundial de Path of Legends. Se actualiza cada hora.</p>
         <p id="clan-actualizado" class="suave"></p>
@@ -2083,12 +2105,56 @@ async function cargarMazosClan() {
     mensaje("msg-clan", errorClan(e, "No pudimos cargar los mazos. Intenta de nuevo"));
   }
 }
+let miembrosClan = [], ordenMiembros = "donadas";
+function pintarMiembros() {
+  const cont = $("clan-miembros"); cont.innerHTML = "";
+  $("miem-vacio").classList.toggle("oculto", miembrosClan.length > 0);
+  const val = { donadas: (m) => m.donadas, trofeos: (m) => m.trofeos, ganadas: (m) => (m.ganadas == null ? -1 : m.ganadas), guerra: (m) => m.guerraMazos * 100000 + m.guerraFama };
+  const f = val[ordenMiembros] || val.donadas;
+  document.querySelectorAll("#miem-orden .chip").forEach((c) => { c.style.borderColor = c.dataset.ord === ordenMiembros ? "var(--oro)" : ""; });
+  miembrosClan.slice().sort((a, b) => f(b) - f(a)).forEach((m, i) => {
+    const caja = document.createElement("div"); caja.className = "miem";
+    const cab = document.createElement("div"); cab.className = "miem-cab";
+    const quien = document.createElement("b"); quien.textContent = (i + 1) + ". " + m.nombre;
+    const rol = document.createElement("span"); rol.className = "miem-rol"; rol.textContent = m.rol + " · nivel " + m.nivel;
+    cab.append(quien, rol);
+    const datos = document.createElement("div"); datos.className = "miem-datos";
+    const partes = [["🏆 " + m.trofeos.toLocaleString("es-CO")], ["🎁 dio " + m.donadas + " · recibió " + m.recibidas]];
+    if (m.ganadas != null) {
+      const s = document.createElement("span");
+      const g = document.createElement("span"); g.className = "g"; g.textContent = m.ganadas + " ✅";
+      const pe = document.createElement("span"); pe.className = "p"; pe.textContent = m.perdidas + " ❌";
+      s.append("Últimas partidas: ", g, " / ", pe); partes.push(s);
+    }
+    partes.push(["⚔️ guerra: " + m.guerraMazos + " mazos"]);
+    if (m.visto) partes.push(["👁 " + haceTxt(m.visto)]);
+    partes.forEach((p) => { if (p instanceof Node) datos.appendChild(p); else { const s = document.createElement("span"); s.textContent = p[0]; datos.appendChild(s); } });
+    caja.append(cab, datos); cont.appendChild(caja);
+  });
+}
+document.querySelectorAll("#miem-orden .chip").forEach((c) => { c.onclick = () => { ordenMiembros = c.dataset.ord; pintarMiembros(); }; });
+async function cargarMiembrosClan() {
+  try {
+    const r = (await functions.httpsCallable("clanMiembros")()).data;
+    miembrosClan = r.miembros || [];
+    const c = r.clan || {}, res = $("clan-resumen"); res.innerHTML = "";
+    [[c.miembros || miembrosClan.length, "miembros"], [(c.donacionesSemana || 0).toLocaleString("es-CO"), "donaciones/semana"], [(c.puntos || 0).toLocaleString("es-CO"), "puntos del clan"]].forEach((x) => {
+      const d = document.createElement("div"), b = document.createElement("b"), t = document.createElement("span");
+      b.textContent = x[0]; t.textContent = x[1]; d.append(b, t); res.appendChild(d);
+    });
+    $("miem-act").textContent = r.actualizado ? "Actualizado " + haceTxt(r.actualizado) + ". Las partidas son de las últimas 25 de cada jugador, sin contar las amistosas." : "";
+    pintarMiembros();
+  } catch (e) {
+    if (e.code === "functions/permission-denied") return;   // lo maneja cargarMazosClan
+    mensaje("msg-clan", errorClan(e, "No pudimos cargar los miembros. Intenta de nuevo"));
+  }
+}
 async function cargarClan() {
   mensaje("msg-clan", "");
   try {
     const e = (await functions.httpsCallable("clanEstado")()).data;
     pintarClanPuerta(e.estado);
-    if (e.estado === "aprobada") await cargarMazosClan();
+    if (e.estado === "aprobada") await Promise.all([cargarMiembrosClan(), cargarMazosClan()]);
   } catch (e) { mensaje("msg-clan", errorClan(e, "No pudimos cargar esta sección. Intenta de nuevo")); }
 }
 $("btn-clan").onclick = () => cargarClan();
@@ -2098,7 +2164,7 @@ $("btn-clan-pedir").onclick = async () => {
     const r = (await functions.httpsCallable("clanSolicitar")()).data;
     pintarClanPuerta(r.estado);
     mensaje("msg-clan", r.estado === "pendiente" ? "Solicitud enviada. El administrador la revisará." : "", true);
-    if (r.estado === "aprobada") await cargarMazosClan();
+    if (r.estado === "aprobada") await Promise.all([cargarMiembrosClan(), cargarMazosClan()]);
   } catch (e) { mensaje("msg-clan", errorClan(e, "No pudimos enviar tu solicitud. Intenta de nuevo")); }
   b.disabled = false;
 };
