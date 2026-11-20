@@ -139,6 +139,30 @@ dialog input{text-align:center;font-size:.8em;margin:0 0 10px}
 .mazo-acc{display:flex;gap:8px;flex-wrap:wrap}
 .mazo-acc .primario,.mazo-acc .secundario{flex:1;width:auto;min-width:140px;display:block;text-align:center;text-decoration:none;font-size:.9rem;padding:10px 12px}
 .mazo-pie{display:flex;gap:12px;flex-wrap:wrap;color:var(--suave);font-size:.85rem}
+.atajo{border:2px solid var(--oro);border-radius:14px;padding:14px;margin:0 0 16px;background:rgba(5,11,32,.55)}
+.atajo h3{margin:0 0 4px}
+.atajo .suave{margin:0 0 10px;font-size:.9rem}
+.atajo-lista{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;margin:0 0 6px;scrollbar-width:thin}
+.atajo-lista .chip{flex:none;white-space:nowrap;max-width:70vw;overflow:hidden;text-overflow:ellipsis}
+.mazo,#clan-mazos-tit{scroll-margin-top:92px}
+.mazo{transition:border-color .4s}
+.mazo.destacado{border-color:var(--oro)}
+.mazos-bloqueo{border:2px solid var(--oro);border-radius:14px;padding:14px;margin:0 0 16px;background:rgba(5,11,32,.55)}
+.mazos-bloqueo b{color:var(--oro)}
+.mazos-bloqueo p{margin:6px 0 10px;font-size:.92rem}
+.cdin-lista{list-style:none;margin:0;padding:0}
+.cdin{display:flex;flex-direction:column;gap:6px;border:2px solid var(--linea);border-radius:12px;padding:14px;margin:0 0 14px;background:rgba(5,11,32,.45)}
+.cdin p{margin:0;overflow-wrap:anywhere}
+.cdin-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.cdin-cab b{font-size:1.1em;overflow-wrap:anywhere}
+.cdin-tags{flex:none;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+.cdin-tag{padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:700;border:1px solid var(--oro);color:var(--oro)}
+.cdin-tag.ok{border-color:var(--ok);color:var(--ok)}
+.cdin-tag.mal{border-color:var(--error);color:var(--error)}
+.cdin-codigo{padding:10px 12px;border-radius:10px;border:1px dashed var(--oro);background:rgba(253,181,43,.08);overflow-wrap:anywhere}
+.cdin-codigo b{color:var(--oro)}
+.cdin-acc{display:flex;gap:8px;margin-top:6px}
+.cdin-acc button{flex:1;width:auto}
 
 /* ---- Legión Real: imágenes y acabado visual ---- */
 :root{
@@ -320,6 +344,7 @@ input:focus{border-color:var(--cian)}
           <button type="button" data-sec="dinamicas">Dinámicas</button>
           <button type="button" data-sec="desafios">Eventos</button>
           <button type="button" data-sec="clan">Clan Legión Real</button>
+          <button type="button" data-sec="mazos">Mazos de jugadores top</button>
           <button type="button" data-sec="historial">Historial</button>
           <button type="button" data-sec="creditos">Créditos</button>
           <button type="button" data-sec="guia">Cómo jugar</button>
@@ -559,6 +584,7 @@ input:focus{border-color:var(--cian)}
             <li>En <b>Torneos</b> te inscribes gratis: no se gastan créditos. Necesitas tener tu tag de Supercell vinculado.</li>
             <li>Mientras las inscripciones estén abiertas puedes salirte. Cuando el administrador inicia el torneo, se cierran.</li>
             <li>El ganador toca <b>Reclamar</b> y el administrador le entrega el Pass Royale.</li>
+            <li>En algunos torneos el premio son <b>créditos por cada victoria</b>: entre más ganes, más créditos recibes. Pueden ser <b>bonos</b> (se juegan, no se retiran) o <b>canjeables</b> (se pueden retirar). Se acreditan solos cuando el administrador finaliza el torneo.</li>
             <li>Los torneos se juegan dentro de Clash Royale. Al inscribirte ves el código (y la clave, si tiene) para entrar, y la tabla sale directo del juego.</li>
             <li>Toca <b>Ver tabla</b> en el torneo para ver cómo vas.</li>
           </ul>
@@ -653,7 +679,7 @@ input:focus{border-color:var(--cian)}
         <h2>Torneos</h2>
         <button type="button" id="btn-torneos" class="secundario mini">Actualizar</button>
       </div>
-      <p class="suave">Torneos gratis: te inscribes sin gastar créditos. El ganador reclama el Pass Royale.</p>
+      <p class="suave">Torneos gratis: te inscribes sin gastar créditos. Según el torneo, el premio es un pase para el ganador o créditos por cada victoria que logres.</p>
       <p id="msg-torneos" class="msg" role="status"></p>
       <ul id="tn-lista" class="torneos"></ul>
       <p id="tn-vacio" class="suave oculto">Por ahora no hay torneos. Vuelve pronto.</p>
@@ -685,6 +711,17 @@ input:focus{border-color:var(--cian)}
         <button type="button" id="btn-clan-pedir" class="primario">Solicitar acceso</button>
       </div>
       <div id="clan-contenido" class="oculto">
+        <div class="chips" id="clan-sub">
+          <button type="button" class="chip activa" data-sub="clan" aria-pressed="true">Miembros y mazos</button>
+          <button type="button" class="chip" data-sub="din" aria-pressed="false">🔒 Dinámicas del clan</button>
+        </div>
+        <div id="clan-vista-clan">
+        <div id="clan-atajo" class="atajo oculto">
+          <h3>🏆 Mazos de los mejores</h3>
+          <p class="suave">Toca un jugador para ir directo a su mazo.</p>
+          <div id="atajo-lista" class="atajo-lista"></div>
+          <button type="button" id="btn-ir-mazos" class="primario">Ir a los mazos</button>
+        </div>
         <h3>Miembros del clan</h3>
         <div id="clan-resumen" class="miem-res"></div>
         <div class="miem-orden" id="miem-orden">
@@ -696,12 +733,45 @@ input:focus{border-color:var(--cian)}
         <p id="miem-act" class="suave"></p>
         <div id="clan-miembros"></div>
         <p id="miem-vacio" class="suave oculto">No hay datos del clan todavía. Vuelve en un rato.</p>
-        <h3>Mazos de los mejores del juego</h3>
+        <h3 id="clan-mazos-tit">Mazos de los mejores del juego</h3>
         <p class="suave">El último mazo que usó cada uno de los mejores jugadores del ranking mundial de Path of Legends. Se actualiza cada hora.</p>
         <p id="clan-actualizado" class="suave"></p>
         <div id="clan-mazos"></div>
         <p id="clan-vacio" class="suave oculto">Todavía no hay mazos cargados. Vuelve en un rato.</p>
+        </div>
+        <div id="clan-vista-din" class="oculto">
+          <h3>Dinámicas del clan</h3>
+          <p class="suave">🔒 Solo para miembros del clan Legión Real: eventos, torneos y dinámicas privadas.</p>
+          <div class="chips" id="cdin-filtro">
+            <button type="button" class="chip activa" data-f="todo" aria-pressed="true">Todo</button>
+            <button type="button" class="chip" data-f="evento" aria-pressed="false">Eventos</button>
+            <button type="button" class="chip" data-f="torneo" aria-pressed="false">Torneos</button>
+            <button type="button" class="chip" data-f="encuesta" aria-pressed="false">Dinámicas</button>
+          </div>
+          <p id="msg-clan-din" class="msg" role="status"></p>
+          <ul id="cdin-lista" class="cdin-lista"></ul>
+          <p id="cdin-vacio" class="suave oculto">Por ahora no hay nada para el clan. Vuelve pronto.</p>
+        </div>
       </div>
+    </div>
+    </div>
+
+    <div class="seccion" data-sec="mazos">
+    <div class="panel">
+      <div class="barra">
+        <h2>Mazos de jugadores top</h2>
+        <button type="button" id="btn-mazos-top" class="secundario mini">Actualizar</button>
+      </div>
+      <p id="mazos-desc" class="suave"></p>
+      <div id="mazos-bloqueo" class="mazos-bloqueo oculto">
+        <b>🔒 Del puesto 1 al 5, solo para el clan</b>
+        <p class="suave">Si quieres ver los mazos de los primeros 5 jugadores del mundo, debes pertenecer al clan Legión Real.</p>
+        <button type="button" id="btn-mazos-clan" class="secundario">Ir al Clan Legión Real</button>
+      </div>
+      <p id="msg-mazos" class="msg" role="status"></p>
+      <p id="mazos-actualizado" class="suave"></p>
+      <div id="mazos-top"></div>
+      <p id="mazos-vacio" class="suave oculto">Todavía no hay mazos cargados. Vuelve en un rato.</p>
     </div>
     </div>
 
@@ -856,7 +926,7 @@ $("btn-google").onclick = async () => {
 $("btn-salir").onclick = () => auth.signOut();
 
 // --- Menú hamburguesa y secciones ---
-const SECCIONES = ["perfil", "clash", "partida", "tabla", "mega", "torneos", "dinamicas", "desafios", "clan", "historial", "creditos", "guia"];
+const SECCIONES = ["perfil", "clash", "partida", "tabla", "mega", "torneos", "dinamicas", "desafios", "clan", "mazos", "historial", "creditos", "guia"];
 
 function abrirMenu(abrir) {
   $("menu").classList.toggle("abierto", abrir);
@@ -883,6 +953,7 @@ function irA(sec) {
   if (sec === "dinamicas") cargarDinamicas();
   if (sec === "desafios") cargarDesafios(true);
   if (sec === "clan") cargarClan();
+  if (sec === "mazos") cargarMazosTop(); else pararMazosTop();
 }
 
 $("btn-menu").onclick = () => abrirMenu(!$("menu").classList.contains("abierto"));
@@ -1607,12 +1678,13 @@ async function accionTorneo(nombre, id, pregunta, ok) {
   cargarTorneosPase();
 }
 
-function pintarTablaTorneo(r) {
+function pintarTablaTorneo(r, t) {
+  const pc = t && t.premioCreditos ? t.premioCreditos : null;   // torneo con créditos por victoria
   const out = [];
   const info = (txt) => out.push(nodo("p", "info", txt));
   if (r.sinTag) { info("El administrador todavía no publica el código del torneo en Clash Royale. Vuelve en un rato."); return out; }
   {
-    info("Tabla del torneo en Clash Royale" + (r.estadoJuego ? " · " + (ESTADO_JUEGO[r.estadoJuego] || r.estadoJuego) : "") + ". Con ✓ están los inscritos aquí; el premio es para el mejor puesto inscrito.");
+    info("Tabla del torneo en Clash Royale" + (r.estadoJuego ? " · " + (ESTADO_JUEGO[r.estadoJuego] || r.estadoJuego) : "") + (pc ? ". Con ✓ están los inscritos aquí; cada victoria de un inscrito suma " + Number(pc.porVictoria).toLocaleString("es-CO") + " créditos " + (pc.tipo === "recargado" ? "canjeables" : "en bonos") + "." : ". Con ✓ están los inscritos aquí; el premio es para el mejor puesto inscrito."));
   }
   if (r.capacidadJuego) info("Jugadores en Clash Royale: " + (r.total || 0) + " de " + r.capacidadJuego + ((r.total || 0) >= r.capacidadJuego ? " · ¡Lleno!" : "."));
   if (r.actualizadoEn) {
@@ -1624,7 +1696,7 @@ function pintarTablaTorneo(r) {
   if (!r.filas || !r.filas.length) { info("Todavía no hay resultados."); return out; }
 
   const juego = r.modo === "juego";
-  const cols = juego ? ["#", "Jugador", "Pts"] : ["#", "Jugador", "PJ", "G", "Pts"];
+  const cols = juego ? (pc ? ["#", "Jugador", "Vict.", "Créditos"] : ["#", "Jugador", "Pts"]) : ["#", "Jugador", "PJ", "G", "Pts"];
   const cab = nodo("tr");
   cols.forEach((c, i) => cab.appendChild(nodo("th", i === 1 ? "" : "num", c)));
   const thead = nodo("thead");
@@ -1644,6 +1716,7 @@ function pintarTablaTorneo(r) {
     const pts = nodo("td", "num");
     pts.appendChild(nodo("b", "", String(f.puntos)));
     tr.appendChild(pts);
+    if (juego && pc) tr.appendChild(nodo("td", "num", f.inscrito ? ((Number(f.puntos) || 0) * (Number(pc.porVictoria) || 0)).toLocaleString("es-CO") : "–"));
     tbody.appendChild(tr);
   });
   const tabla = nodo("table");
@@ -1658,7 +1731,7 @@ async function cargarTablaTorneo(t, panel) {
   panel.replaceChildren(nodo("p", "info", "Cargando tabla…"));
   try {
     const r = (await fnReto("torneoTabla", { id: t.id })).data || {};
-    panel.replaceChildren(...pintarTablaTorneo(r));
+    panel.replaceChildren(...pintarTablaTorneo(r, t));
   } catch (e) {
     panel.replaceChildren(nodo("p", "msg", msgFn(e)));
   }
@@ -1674,7 +1747,10 @@ function tarjetaTorneoPase(t) {
   const dl = nodo("dl");
   const dato = (k, v) => dl.append(nodo("dt", "", k), nodo("dd", "", v));
   const premios = t.premios && t.premios.length ? t.premios : [t.premio];
-  premios.forEach((p, i) => dato(premios.length > 1 ? (i + 1) + ".º puesto" : "Premio", p));   // cada puesto con su premio
+  const pc = t.premioCreditos || null;   // torneo con créditos por victoria
+  const credTxt = pc ? "créditos " + (pc.tipo === "recargado" ? "canjeables" : "en bonos") : "";
+  if (pc) dato("Premio", Number(pc.porVictoria).toLocaleString("es-CO") + " " + credTxt + " por cada victoria" + (pc.tipo === "recargado" ? " (se pueden retirar)" : " (se juegan, no se retiran)"));
+  else premios.forEach((p, i) => dato(premios.length > 1 ? (i + 1) + ".º puesto" : "Premio", p));   // cada puesto con su premio
   dato("Inscritos", t.cupos ? t.inscritos + " de " + t.cupos : String(t.inscritos));
   if (t.ganadores && t.ganadores.length > 1) t.ganadores.forEach((g) => dato("Ganó el " + g.puesto + ".º puesto", g.nombre + (g.tag ? " · " + g.tag : "")));
   else if (t.ganador) dato("Ganador", t.ganador.nombre + (t.ganador.tag ? " · " + t.ganador.tag : ""));
@@ -1716,7 +1792,13 @@ function tarjetaTorneoPase(t) {
       boton("Inscribirme gratis", "primario", () => accionTorneo("torneoInscribirse", t.id, "", "¡Listo! Quedaste inscrito en «" + t.nombre + "»."));
     }
   } else if (t.estado === "en-juego") {
-    nota(t.inscrito ? "Estás inscrito. El torneo está en juego." : "Las inscripciones ya cerraron.", t.inscrito);
+    nota(t.inscrito ? (pc ? "Estás inscrito. El torneo está en juego: cada victoria te suma " + Number(pc.porVictoria).toLocaleString("es-CO") + " " + credTxt + "." : "Estás inscrito. El torneo está en juego.") : "Las inscripciones ya cerraron.", t.inscrito);
+  } else if (t.estado === "finalizado" && pc) {
+    const mp = t.miPago || null;   // lo manda el servidor al pagar: { victorias, monto }
+    if (mp && Number(mp.monto) > 0) nota("¡Ganaste " + Number(mp.monto).toLocaleString("es-CO") + " " + credTxt + " por tus " + (Number(mp.victorias) || 0) + " victorias! Ya están en tu saldo ✓", true);
+    else if (t.inscrito && t.pagado) nota("No sumaste victorias en este torneo, así que no hubo créditos.", true);
+    else if (t.inscrito) nota("Torneo finalizado. Estamos acreditando tus créditos.", true);
+    else nota("Este torneo ya finalizó.");
   } else if (t.estado === "finalizado" && (t.miPuesto || t.soyGanador)) {
     const mp = t.miPuesto || { puesto: 1, premio: t.premio, reclamado: t.premioReclamado, entregado: t.premioEntregado };
     const cuando = premios.length > 1 ? " (" + mp.puesto + ".º puesto)" : "";
@@ -1877,6 +1959,11 @@ function pintarDinamicas(lista) {
     pr.textContent = "Gana " + d.premio + (d.premio === 1 ? " moneda" : " monedas") + (d.conCorrecta ? " si aciertas" : "") + (d.pago === "alcerrar" ? (d.conCorrecta ? ", cuando cierre la encuesta" : " cuando cierre la encuesta") : "");
     const q = document.createElement("p"); q.className = "din-pregunta"; q.textContent = d.pregunta;
     li.append(t, pr, cu, q);
+    if (d.cierra) {
+      const ci = document.createElement("p"); ci.className = "suave";
+      ci.textContent = "⏰ " + (d.cierra > Date.now() ? "Cierra " : "Cerró ") + new Date(d.cierra).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
+      li.appendChild(ci);
+    }
     if (d.conCorrecta && !d.respondida) {
       const av = document.createElement("p"); av.className = "suave"; av.textContent = "🎯 Solo hay una respuesta correcta. Si aciertas, cobras el premio; si fallas, pierdes y ya no puedes volver a votar."; li.appendChild(av);
     }
@@ -2064,12 +2151,13 @@ function pintarClanPuerta(estado) {
     btn.textContent = "Solicitar acceso";
   }
 }
-function pintarMazos(mazos, actualizado) {
-  const cont = $("clan-mazos"); cont.innerHTML = "";
-  $("clan-vacio").classList.toggle("oculto", mazos.length > 0);
-  $("clan-actualizado").textContent = actualizado ? "Actualizado " + haceTxt(actualizado) + "." : "";
-  mazos.forEach((m) => {
-    const caja = document.createElement("div"); caja.className = "mazo";
+function irAElemento(el) {
+  const quieto = window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  el.scrollIntoView({ behavior: quieto ? "auto" : "smooth", block: "start" });
+  if (el.classList.contains("mazo")) { el.classList.add("destacado"); setTimeout(() => el.classList.remove("destacado"), 1600); }
+}
+function tarjetaMazo(m) {
+  const caja = document.createElement("div"); caja.className = "mazo";
     const cab = document.createElement("div"); cab.className = "mazo-cab";
     const quien = document.createElement("b"); quien.textContent = "#" + m.rank + " · " + m.nombre;
     const res = document.createElement("span");
@@ -2106,9 +2194,22 @@ function pintarMazos(mazos, actualizado) {
       };
       acc.append(abrir, copiar); caja.appendChild(acc);
     }
+  return caja;
+}
+function pintarMazos(mazos, actualizado) {
+  const cont = $("clan-mazos"); cont.innerHTML = "";
+  const lista = $("atajo-lista"); lista.innerHTML = "";
+  $("clan-atajo").classList.toggle("oculto", mazos.length === 0);
+  $("clan-vacio").classList.toggle("oculto", mazos.length > 0);
+  $("clan-actualizado").textContent = actualizado ? "Actualizado " + haceTxt(actualizado) + "." : "";
+  mazos.forEach((m) => {
+    const caja = tarjetaMazo(m);
+    const atajo = document.createElement("button"); atajo.type = "button"; atajo.className = "chip";
+    atajo.textContent = "#" + m.rank + " " + m.nombre; atajo.onclick = () => irAElemento(caja); lista.appendChild(atajo);
     cont.appendChild(caja);
   });
 }
+$("btn-ir-mazos").onclick = () => irAElemento($("clan-mazos-tit"));
 async function cargarMazosClan() {
   try {
     const r = (await functions.httpsCallable("clanMazos")()).data;
@@ -2122,6 +2223,34 @@ async function cargarMazosClan() {
     mensaje("msg-clan", errorClan(e, "No pudimos cargar los mazos. Intenta de nuevo"));
   }
 }
+// ---------- Mazos de jugadores top: puestos 6 al 20 abiertos; 1 al 5 solo para el clan. Se refresca solo mientras la sección está abierta ----------
+var mazosTopTimer = null, mazosTopVisto = "";
+function pintarMazosTop(r) {
+  const mazos = r.mazos || [];
+  $("mazos-bloqueo").classList.toggle("oculto", !!r.esClan);
+  $("mazos-desc").textContent = r.esClan
+    ? "El último mazo que usó cada jugador del top 20 del ranking mundial de Path of Legends. Se actualiza solo."
+    : "El último mazo que usó cada jugador del ranking mundial de Path of Legends, del puesto 6 al 20. Se actualiza solo.";
+  $("mazos-actualizado").textContent = r.actualizado ? "Actualizado " + haceTxt(r.actualizado) + "." : "";
+  $("mazos-vacio").classList.toggle("oculto", mazos.length > 0);
+  const clave = (r.actualizado || 0) + "|" + (r.esClan ? 1 : 0);
+  if (clave === mazosTopVisto) return;   // los datos no cambiaron: no se repinta (así la pantalla no salta mientras lees)
+  mazosTopVisto = clave;
+  const cont = $("mazos-top"); cont.innerHTML = "";
+  mazos.forEach((m) => cont.appendChild(tarjetaMazo(m)));
+}
+async function cargarMazosTop(silencioso) {
+  if (silencioso !== true) mensaje("msg-mazos", "");
+  try {
+    pintarMazosTop((await functions.httpsCallable("mazosTop")()).data);
+  } catch (e) {
+    if (silencioso !== true) mensaje("msg-mazos", errorClan(e, "No pudimos cargar los mazos. Intenta de nuevo"));
+  }
+  if (!mazosTopTimer) mazosTopTimer = setInterval(() => { if (!document.hidden) cargarMazosTop(true); }, 5 * 60 * 1000);
+}
+function pararMazosTop() { if (mazosTopTimer) { clearInterval(mazosTopTimer); mazosTopTimer = null; } }
+$("btn-mazos-top").onclick = () => cargarMazosTop();
+$("btn-mazos-clan").onclick = () => { location.hash = "clan"; };
 let miembrosClan = [], ordenMiembros = "donadas";
 function pintarMiembros() {
   const cont = $("clan-miembros"); cont.innerHTML = "";
@@ -2171,7 +2300,7 @@ async function cargarClan() {
   try {
     const e = (await functions.httpsCallable("clanEstado")()).data;
     pintarClanPuerta(e.estado);
-    if (e.estado === "aprobada") await Promise.all([cargarMiembrosClan(), cargarMazosClan()]);
+    if (e.estado === "aprobada") await Promise.all([cargarMiembrosClan(), cargarMazosClan(), ...(clanVista === "din" ? [cargarClanDin()] : [])]);
   } catch (e) { mensaje("msg-clan", errorClan(e, "No pudimos cargar esta sección. Intenta de nuevo")); }
 }
 $("btn-clan").onclick = () => cargarClan();
@@ -2185,6 +2314,126 @@ $("btn-clan-pedir").onclick = async () => {
   } catch (e) { mensaje("msg-clan", errorClan(e, "No pudimos enviar tu solicitud. Intenta de nuevo")); }
   b.disabled = false;
 };
+
+// ---------- Clan: dinámicas privadas (eventos, torneos y encuestas solo para el clan) ----------
+let clanVista = "clan", cdinFiltro = "todo", cdinItems = [], cdinSel = {};   // cdinSel: id -> opción elegida (solo en pantalla)
+const TIPO_CDIN = { encuesta: "Dinámica", torneo: "Torneo", evento: "Evento" };
+const ESTADO_CDIN = { abierto: "Abierto", "en-juego": "En juego", finalizado: "Finalizado", cancelado: "Cancelado" };
+const CLASE_CDIN = { finalizado: "ok", cancelado: "mal" };
+function errorClanDin(e, porDefecto) {
+  if (e.code === "functions/not-found") return "Las dinámicas del clan todavía no están disponibles.";
+  return errorClan(e, porDefecto);
+}
+function marcarChips(selector, atributo, valor) {
+  document.querySelectorAll(selector).forEach((b) => { const on = b.dataset[atributo] === valor; b.classList.toggle("activa", on); b.setAttribute("aria-pressed", on); });
+}
+function elegirVistaClan(v) {
+  clanVista = v;
+  $("clan-vista-clan").classList.toggle("oculto", v !== "clan");
+  $("clan-vista-din").classList.toggle("oculto", v !== "din");
+  marcarChips("#clan-sub .chip", "sub", v);
+  if (v === "din") cargarClanDin();
+}
+document.querySelectorAll("#clan-sub .chip").forEach((b) => { b.onclick = () => elegirVistaClan(b.dataset.sub); });
+document.querySelectorAll("#cdin-filtro .chip").forEach((b) => {
+  b.onclick = () => { cdinFiltro = b.dataset.f; marcarChips("#cdin-filtro .chip", "f", cdinFiltro); pintarClanDin(cdinItems); };
+});
+async function accionClanDin(funcion, d, ok) {
+  mensaje("msg-clan-din", "Enviando…", true);
+  try { await functions.httpsCallable(funcion)({ id: d.id }); mensaje("msg-clan-din", ok, true); }
+  catch (e) { mensaje("msg-clan-din", errorClanDin(e, "No pudimos completar la acción. Intenta de nuevo")); }
+  cargarClanDin(true);
+}
+async function responderClanDin(d, btn) {
+  btn.disabled = true; mensaje("msg-clan-din", "Enviando…", true);
+  try {
+    const r = (await functions.httpsCallable("clanDinamicaResponder")({ id: d.id, opcion: cdinSel[d.id] })).data;
+    delete cdinSel[d.id];
+    if (r.perdio) mensaje("msg-clan-din", "❌ Respuesta incorrecta: perdiste. Ya no puedes volver a votar aquí.");
+    else mensaje("msg-clan-din", (r.acerto ? "🎉 ¡Correcto! " : "") + (r.pendiente ? "¡Respuesta enviada! Recibirás tu premio cuando cierre." : "¡Listo! Ganaste " + r.premio + (r.premio === 1 ? " moneda." : " monedas.")), true);
+    await cargarClanDin(true);
+  } catch (e) {
+    mensaje("msg-clan-din", errorClanDin(e, "No pudimos enviar tu respuesta. Intenta de nuevo"));
+    btn.disabled = false;
+  }
+}
+function tarjetaClanDin(d) {
+  const li = nodo("li", "cdin");
+  const cab = nodo("div", "cdin-cab"), tags = nodo("span", "cdin-tags");
+  tags.appendChild(nodo("span", "cdin-tag", TIPO_CDIN[d.tipo] || "Evento"));
+  if (d.estado && d.estado !== "abierto") tags.appendChild(nodo("span", "cdin-tag " + (CLASE_CDIN[d.estado] || ""), ESTADO_CDIN[d.estado] || d.estado));
+  cab.append(nodo("b", "", d.titulo || TIPO_CDIN[d.tipo] || "Evento"), tags);
+  li.appendChild(cab);
+  if (d.descripcion) li.appendChild(nodo("p", "", d.descripcion));
+  if (d.tipo === "encuesta") {
+    const costo = Number(d.costo || 0), premio = Number(d.premio || 0);
+    if (premio > 0) li.appendChild(nodo("p", "din-premio", "Gana " + premio + (premio === 1 ? " moneda" : " monedas") + (d.conCorrecta ? " si aciertas" : "") + (d.pago === "alcerrar" ? " (se paga cuando cierre)" : "")));
+    if (costo > 0) li.appendChild(nodo("p", "din-premio", "Cuesta " + costo + (costo === 1 ? " crédito" : " créditos")));
+  } else if (d.premioTxt) {
+    li.appendChild(nodo("p", "din-premio", "🏆 Premio: " + d.premioTxt));
+  }
+  if (d.cierra) li.appendChild(nodo("p", "suave", "⏰ " + (d.cierra > Date.now() ? "Cierra " : "Cerró ") + new Date(d.cierra).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })));
+  if (d.tipo === "encuesta") {
+    if (d.pregunta) li.appendChild(nodo("p", "din-pregunta", d.pregunta));
+    if (d.respondida && d.perdio) li.appendChild(nodo("p", "msg", "❌ Respondiste mal y perdiste. Ya no puedes volver a votar aquí."));
+    else if (d.respondida) li.appendChild(nodo("p", "msg ok", (d.acerto ? "✅ ¡Acertaste!" : "✅ Ya respondiste.") + (d.pago === "alcerrar" ? " Recibirás tus monedas cuando cierre." : "")));
+    else if (d.estado === "abierto" || !d.estado) {
+      if (d.conCorrecta) li.appendChild(nodo("p", "suave", "🎯 Solo hay una respuesta correcta. Si fallas, pierdes y ya no puedes volver a votar."));
+      const ops = nodo("div", "din-ops");
+      (d.opciones || []).forEach((txt, i) => {
+        const b = nodo("button", "chip" + (cdinSel[d.id] === i ? " activa" : ""), txt);
+        b.type = "button"; b.onclick = () => { cdinSel[d.id] = i; pintarClanDin(cdinItems); };
+        ops.appendChild(b);
+      });
+      const costo = Number(d.costo || 0);
+      const env = nodo("button", "primario", costo > 0 ? "Responder (" + costo + (costo === 1 ? " crédito)" : " créditos)") : "Responder");
+      env.type = "button"; env.disabled = cdinSel[d.id] == null;
+      env.onclick = () => {
+        const aviso = (costo > 0 ? "Responder cuesta " + costo + (costo === 1 ? " crédito" : " créditos") + ". Se cobra una sola vez." : "") + (d.conCorrecta ? (costo > 0 ? "\n\n" : "") + "Solo hay una respuesta correcta: si fallas, pierdes y ya no podrás volver a votar." : "");
+        if (aviso && !confirm(aviso + "\n\n¿Quieres continuar?")) return;
+        responderClanDin(d, env);
+      };
+      li.append(ops, env);
+    } else li.appendChild(nodo("p", "suave", "Esta dinámica ya cerró."));
+  } else {
+    const n = Number(d.inscritosN || 0), cupo = Number(d.cupo || 0);
+    li.appendChild(nodo("p", "suave", "👥 " + n + (n === 1 ? " inscrito" : " inscritos") + (cupo > 0 ? " de " + cupo : "")));
+    if (d.inscrito && d.codigo) { const c = nodo("p", "cdin-codigo", "Código para entrar: "); c.appendChild(nodo("b", "", d.codigo)); li.appendChild(c); }
+    if (d.estado === "abierto" || !d.estado) {
+      const acc = nodo("div", "cdin-acc");
+      if (d.inscrito) {
+        const b = nodo("button", "secundario", "Salir"); b.type = "button";
+        b.onclick = () => { if (confirm("¿Salir de «" + (d.titulo || "este evento") + "»?")) accionClanDin("clanDinamicaSalir", d, "Saliste del evento."); };
+        acc.appendChild(b);
+      } else {
+        const lleno = cupo > 0 && n >= cupo;
+        const b = nodo("button", "primario", lleno ? "Cupo completo" : "Inscribirme gratis"); b.type = "button"; b.disabled = lleno;
+        b.onclick = () => accionClanDin("clanDinamicaInscribir", d, "¡Listo! Quedaste inscrito.");
+        acc.appendChild(b);
+      }
+      li.appendChild(acc);
+    } else li.appendChild(nodo("p", d.inscrito ? "msg ok" : "suave", d.inscrito ? "Estás inscrito." : "Las inscripciones ya cerraron."));
+  }
+  return li;
+}
+function pintarClanDin(items) {
+  cdinItems = items;
+  const ul = $("cdin-lista"); ul.innerHTML = "";
+  const ver = items.filter((d) => cdinFiltro === "todo" || d.tipo === cdinFiltro);
+  const vacio = $("cdin-vacio");
+  vacio.textContent = items.length ? "No hay nada en esta categoría por ahora." : "Por ahora no hay nada para el clan. Vuelve pronto.";
+  vacio.classList.toggle("oculto", ver.length > 0);
+  ver.forEach((d) => ul.appendChild(tarjetaClanDin(d)));
+}
+async function cargarClanDin(conservarMensaje) {
+  if (!auth.currentUser) return;
+  try {
+    const r = (await functions.httpsCallable("clanDinamicas")()).data;
+    if (!conservarMensaje) mensaje("msg-clan-din", "");
+    pintarClanDin(r.items || []);
+  } catch (e) { mensaje("msg-clan-din", errorClanDin(e, "No pudimos cargar las dinámicas del clan. Intenta de nuevo")); }
+}
+
 
 // Copia pública del perfil (sin correo ni teléfono) para que aparezca en la tabla.
 function sincronizarPublico(p, user) {
